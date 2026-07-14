@@ -28,6 +28,39 @@ Run these as the first actions of a new session:
    (service map) and §6 (milestone ladder) define what gets built next
    and in what order.
 
+## Working the backlog
+
+This repo's backlog is its spec corpus: every spec with
+`implementation: pending` is a work order. One session implements one
+spec, start to finish. Build order: 002 app shell, 003 Postgres, 004
+tenants, 005 factory, 006 fleet, 007 webapp; 008 governance is
+parallel-safe any time after 002.
+
+1. Pick the next spec: the lowest-numbered spec whose frontmatter says
+   `implementation: pending` and whose `depends_on` specs are all
+   implemented (`spec-spine registry show <id>` to inspect). If a
+   spec's "Cross-repo dependency" or "Operator prerequisites" section
+   names something missing, stop and report exactly what is needed
+   instead of mocking around it.
+2. Flip the spec to `implementation: in-progress` when you start.
+3. Re-read the spec fully before coding. If the design is imprecise or
+   wrong, amend the spec FIRST (design truth precedes code), then
+   implement. Never edit a spec afterwards to ratify what the code
+   happened to do.
+4. Implement within the spec's territory. Before every commit:
+   `spec-spine compile && spec-spine index &&
+   spec-spine lint --fail-on-warn && spec-spine index check`, plus the
+   build/test commands in CLAUDE.md (after spec 002: the chassis npm
+   gates, typecheck + vitest).
+5. Satisfy the spec's Acceptance section verbatim. If an item cannot
+   be satisfied (external state, missing sibling repo work), keep
+   `implementation: in-progress`, add a dated Status note to the spec
+   saying exactly what remains, and report it. Flip to
+   `implementation: complete` only when acceptance holds.
+6. Commit with a conventional message referencing the spec id
+   (`feat(004): ...`), include the regenerated `.derived/` shards, and
+   push to main. Then stop: the next session takes the next spec.
+
 ## Working rules
 
 - Specs are the source of truth; code lands only under an owning spec.
