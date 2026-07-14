@@ -36,6 +36,20 @@ summary: >
 
 # 002: App shell
 
+## 0. Cross-repo gate (read first)
+
+BLOCKED until enrahitu specs 018 (packaged chassis) and 019
+(frontend/backend layout) are implemented (decided 2026-07-14): the
+first template consumer must import the slimmed two-directory shape,
+never the fat tree. When picking work, if enrahitu's registry does not
+show 018 and 019 implemented, take spec 008 instead (it has no chassis
+dependency) and report the blockage. After 018/019, the import in §2
+brings a tree whose only code directories are `frontend/` and
+`backend/`, with the toolchain and the hiqlite addon arriving as
+pinned npm packages (@enrahitu/toolchain, @enrahitu/hiqlite-native)
+rather than as vendored source; read the template's then-current
+CLAUDE.md for the layout truth and adjust the §2 mechanics to it.
+
 ## 1. Purpose
 
 Every service the control plane needs (tenants, factory, fleet) is an

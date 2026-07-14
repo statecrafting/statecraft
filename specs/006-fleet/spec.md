@@ -77,9 +77,15 @@ its standalone hiqlite state (job state moves to CoreLedger here).
   completion. When spec 008 lands, gate remove/update through
   action-gate and record ops to the attestation ledger (soft
   dependency, same pattern as spec 005 §3.3).
-- Operator prerequisites: kubeconfig with a dedicated ServiceAccount
-  (namespace-create + workload rights), `FLEET_BASE_DOMAIN`, TLS issuer
-  name. Absent: stop and report.
+- Operator prerequisites: the cluster credentials exist at the central
+  infra config: kubeconfig at `~/.config/oap/infra/hetzner/kubeconfig`
+  (mode 0600) and cluster env at `~/.config/oap/infra/hetzner/.env`
+  (HCLOUD_TOKEN, DOMAIN, CLOUDFLARE_DNS_API_TOKEN, LETSENCRYPT_EMAIL
+  among others; read key names, never echo values). v1 may use this
+  admin kubeconfig directly; graduating to a dedicated ServiceAccount
+  (namespace-create + workload rights only) is a required follow-up
+  before any non-operator touches the fleet. `FLEET_BASE_DOMAIN` and
+  the TLS issuer name still need choosing: stop and report if unset.
 
 ## 4. Acceptance
 

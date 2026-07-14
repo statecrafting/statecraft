@@ -16,7 +16,7 @@
   },
   "mapping": {
     "dependsOn": [
-      "002-app-shell"
+      "001-stagecraft-thesis"
     ],
     "implementingPaths": [],
     "resolvedUnits": [
@@ -43,5 +43,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "a5d6e8ca549deb5b94868d5e5836246d451e97ff99cfacffe15cbe794e7588a5"
+  "shardHash": "e083d7ec425f65d0226381cf123dcac49f87f1c8f5abeced94c2df29b03dcf9f"
 }

@@ -5,7 +5,7 @@ status: approved
 created: "2026-07-14"
 implementation: pending
 depends_on:
-  - "002-app-shell"
+  - "001-stagecraft-thesis"
 establishes:
   - { kind: directory, path: "governance/" }
   - { kind: directory, path: "addon/governance-native/" }

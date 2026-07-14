@@ -34,7 +34,10 @@ This repo's backlog is its spec corpus: every spec with
 `implementation: pending` is a work order. One session implements one
 spec, start to finish. Build order: 002 app shell, 003 Postgres, 004
 tenants, 005 factory, 006 fleet, 007 webapp; 008 governance is
-parallel-safe any time after 002.
+parallel-safe any time after 002. Exception (2026-07-14): 002 is
+gated on enrahitu 018+019 (slimmed template); while that gate holds,
+008's addon + service can start first (it does not need the chassis;
+rebase its service wiring onto the shell when 002 lands).
 
 1. Pick the next spec: the lowest-numbered spec whose frontmatter says
    `implementation: pending` and whose `depends_on` specs are all

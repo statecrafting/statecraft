@@ -23,19 +23,31 @@ summary: >
 
 # 004: Tenants + GitHub App
 
-## 1. Operator prerequisites (manual, one-time)
+## 1. Operator prerequisites (SATISFIED 2026-07-14: the App exists)
 
-The implementing session cannot create these; if absent, stop and
-report exactly what is needed:
+Use the existing GitHub App; do not create a new one:
 
-- A GitHub App under the stagecraft-ing org (dev instance), with:
-  permissions `contents: read&write`, `administration: read&write`
-  (repo creation), `metadata: read`, `checks: read`; webhook URL
-  pointing at the dev tunnel or disabled for local dev; "Any account"
-  installable. Provide via env: `GITHUB_APP_ID`,
-  `GITHUB_APP_PRIVATE_KEY` (PEM, via Encore secret), `GITHUB_APP_SLUG`,
-  `GITHUB_WEBHOOK_SECRET`.
-- A test GitHub org (or personal account) to install into.
+- **"StageCraft.ing GitHub App"**: App ID `3319911`, slug
+  `stagecraft-ing-github-app`, Client ID `Iv23liGNXeou5MxTTKxR`,
+  public link `https://github.com/apps/stagecraft-ing-github-app`.
+  Already installed org-wide on stagecraft-ing (installation id
+  `125344051`, all repositories), which doubles as the test
+  installation for e2e.
+- Permissions are a superset of what this spec needs (read: issues,
+  metadata, org administration, org plan, pull requests; read&write:
+  actions, administration, checks, code, members, secrets,
+  workflows). Request nothing new.
+- **Credentials** live in the central infra config
+  `~/.config/oap/infra/hetzner/.env`: `GITHUB_APP_ID`,
+  `GITHUB_APP_PRIVATE_KEY_B64` (base64-encoded PEM: decode before
+  signing App JWTs), `GITHUB_WEBHOOK_SECRET`. Wire them into Encore
+  secrets for this app; never commit or echo values. Use
+  `GITHUB_APP_SLUG=stagecraft-ing-github-app`.
+- The App's webhook is active and points at the legacy plane
+  (`https://stagecraft.ing/api/github/webhook`). For local dev,
+  leave it; implement and unit-test HMAC verification regardless.
+  Repointing the webhook to the new control plane happens when it has
+  a public URL (fleet-deployed), not before.
 
 ## 2. Territory
 
