@@ -57,6 +57,7 @@ for (const arm of arms) {
         appName: "smoke-app",
         org: "stagecraft-ing",
         frontend: "react-rr7",
+        pages: true,
         templateRef: "34134f9a48ddff75cca1df4f9a15e06140357bdd",
         mode: "adopt" as const,
         contractVersion: "0.5.0",
@@ -68,6 +69,7 @@ for (const arm of arms) {
       const back = await repo.findById(job.id);
       expect(back?.appName).toBe("smoke-app");
       expect(back?.frontend).toBe("react-rr7");
+      expect(back?.pages).toBe(true);
       expect(back?.mode).toBe("adopt");
       expect(back?.posture).toBe("assisted");
       expect(back?.status).toBe("queued");

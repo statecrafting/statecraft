@@ -38,6 +38,7 @@ export interface CreateJobInput {
   org: string;
   frontend: string;
   mode: StampMode;
+  pages: boolean;
   templateRef: string;
   contractVersion: string;
   posture: Posture;
@@ -69,6 +70,7 @@ export async function createOrGetLiveJob(
       org: input.org,
       frontend: input.frontend,
       mode: input.mode,
+      pages: input.pages,
       templateRef: input.templateRef,
       contractVersion: input.contractVersion,
       posture: input.posture,

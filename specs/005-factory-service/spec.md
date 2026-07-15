@@ -58,14 +58,14 @@ endpoints, CoreLedger entities, template cache, stamp pipeline.
   `[slots]`. Reject stamps whose contract the factory does not support,
   with a precise error.
 - **Entities**: `StampJob` (id, tenantId, installationId, appName,
-  org, frontend, templateRef, contractVersion, posture, status
+  org, frontend, pages, templateRef, contractVersion, posture, status
   queued|stamping|pushing|verifying|green|failed, checksRunId?,
   certHash?, createdAt, updatedAt, error?). `posture` is persisted on
   the job because step 3 builds the cert from the request's posture and
   the pipeline runs asynchronously (it re-reads the job); added here
   before coding.
 - **API** (auth as spec 004): `POST /tenants/:id/stamps` (appName,
-  targetOrg, frontend?, posture, mode?) -> job id; `GET /stamps/:jobId`
+  targetOrg, frontend?, posture, mode?, pages?) -> job id; `GET /stamps/:jobId`
   status; `GET /tenants/:id/stamps` list. `posture` is required
   (REQUEST-EXPLICIT, §3 step 3); the API rejects a stamp with no posture
   rather than defaulting it. `mode` is `create` (default) or `adopt`
@@ -188,6 +188,26 @@ pipeline passes it into `validateSlots` (authoritative check against
 `StampJob` round-trip covers the new column; the `validateSlots` frontend cases
 (default, allowed, reject) were already green. typecheck + vitest + spine gates
 green.
+
+AMENDED 2026-07-15 (opt-in Pages provisioning): a stamp may request GitHub
+Pages on the new repo via `pages?: boolean` (default false; persisted on
+`StampJob.pages`). In **create** mode only, a new pipeline step (6b, after push,
+before verify) enables Pages with the GitHub Actions source
+(`POST /repos/{org}/{repo}/pages`, `build_type: "workflow"`) and sets
+`ENABLE_PAGES=true` (`POST/PATCH /repos/{org}/{repo}/actions/variables`) so the
+born-with `pages.yml` (enrahitu spec 013) auto-publishes the SPA preview. It is
+**best-effort**: the repo is already pushed and Pages is an optional preview, so
+any failure is logged (`factory.pages_enable_failed`) and the stamp still runs
+to born-green verify. Adopt is excluded (it lands via a PR, so
+ENABLE_PAGES-on-push would not apply until merge). This step needs two GitHub
+App permissions the App does not hold yet (**Pages: write**, **Variables:
+write**); until they are granted the step 403s and is swallowed, so the code
+ships dormant. The grant plus fleet-wide re-consent is a deliberate operator
+step, tracked in spec 004's 2026-07-15 amendment. `StampJobView` exposes
+`pages`. The new GitHub helpers (`enablePages`, `setRepoVariable`) are IO like
+the rest of `github.ts`: exercised by the manual E2E, not unit-tested; the
+`StampJob` round-trip covers the new boolean column. typecheck + vitest + spine
+gates green.
 
 ## 5. Out of scope
 

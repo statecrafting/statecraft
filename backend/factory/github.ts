@@ -11,10 +11,23 @@ import { getInstallationToken } from "../tenants/github-app";
 const GITHUB_API_BASE = "https://api.github.com";
 const GITHUB_API_VERSION = "2022-11-28";
 
+/** A non-2xx GitHub response; `status` lets callers branch (e.g. 409 already-exists). */
+export class GitHubError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "GitHubError";
+  }
+}
+
 interface GhOptions {
   method?: string;
   token: string;
   body?: unknown;
+  /** HTTP statuses to treat as success (return undefined), e.g. 409 already-enabled. */
+  ignore?: number[];
 }
 
 async function gh<T>(path: string, opts: GhOptions): Promise<T> {
@@ -30,8 +43,12 @@ async function gh<T>(path: string, opts: GhOptions): Promise<T> {
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
   if (!res.ok) {
+    if (opts.ignore?.includes(res.status)) return undefined as T;
     const detail = (await res.text().catch(() => "")).slice(0, 200);
-    throw new Error(`GitHub ${opts.method ?? "GET"} ${path} failed: ${res.status} ${detail}`);
+    throw new GitHubError(
+      res.status,
+      `GitHub ${opts.method ?? "GET"} ${path} failed: ${res.status} ${detail}`,
+    );
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
@@ -175,5 +192,45 @@ export async function waitForVerify(
       return { green: false, runId: verify ? String(verify.id) : null };
     }
     await sleep(intervalMs);
+  }
+}
+
+/**
+ * Enable GitHub Pages with the GitHub Actions build source (spec 005 §3, opt-in
+ * Pages provisioning). Idempotent: a 409 (Pages already enabled) is treated as
+ * success. Requires the App's Pages: write permission (spec 004 §1).
+ */
+export async function enablePages(installationId: string, org: string, repo: string): Promise<void> {
+  const token = await getInstallationToken(installationId);
+  await gh<void>(`/repos/${encodeURIComponent(org)}/${encodeURIComponent(repo)}/pages`, {
+    method: "POST",
+    token,
+    body: { build_type: "workflow" },
+    ignore: [409],
+  });
+}
+
+/**
+ * Create or update a repository Actions variable (spec 005 §3, opt-in). POST
+ * creates it; a 409 means it already exists, so PATCH updates it. Requires the
+ * App's Variables: write permission (spec 004 §1).
+ */
+export async function setRepoVariable(
+  installationId: string,
+  org: string,
+  repo: string,
+  name: string,
+  value: string,
+): Promise<void> {
+  const token = await getInstallationToken(installationId);
+  const base = `/repos/${encodeURIComponent(org)}/${encodeURIComponent(repo)}/actions/variables`;
+  try {
+    await gh<void>(base, { method: "POST", token, body: { name, value } });
+  } catch (err) {
+    if (err instanceof GitHubError && err.status === 409) {
+      await gh<void>(`${base}/${encodeURIComponent(name)}`, { method: "PATCH", token, body: { name, value } });
+      return;
+    }
+    throw err;
   }
 }

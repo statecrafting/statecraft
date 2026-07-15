@@ -33,10 +33,12 @@ Use the existing GitHub App; do not create a new one:
   Already installed org-wide on stagecraft-ing (installation id
   `125344051`, all repositories), which doubles as the test
   installation for e2e.
-- Permissions are a superset of what this spec needs (read: issues,
+- Permissions are a superset of what spec 004 itself needs (read: issues,
   metadata, org administration, org plan, pull requests; read&write:
   actions, administration, checks, code, members, secrets,
-  workflows). Request nothing new.
+  workflows). Spec 004 requests nothing new; spec 005's opt-in Pages
+  provisioning does (Pages: write + Variables: write), superseding this line
+  for exactly those two: see the 2026-07-15 amendment below.
 - **Credentials** live in the central infra config
   `~/.config/oap/infra/hetzner/.env`: `GITHUB_APP_ID`,
   `GITHUB_APP_PRIVATE_KEY_B64` (base64-encoded PEM: decode before
@@ -111,6 +113,27 @@ body); executing it live against GitHub is an operator step that needs the
 App secrets set and, for the webhook leg, the control plane's public URL
 (the App webhook still points at the legacy plane until fleet, spec 006,
 gives it one).
+
+AMENDED 2026-07-15 (Pages provisioning permissions, driven by spec 005):
+spec 005's opt-in Pages provisioning needs two repository permissions the App
+does not currently hold and §1 originally said to skip:
+
+- **Pages: write** for `POST /repos/{org}/{repo}/pages` (enable Pages with the
+  GitHub Actions build source).
+- **Variables: write** for `POST/PATCH /repos/{org}/{repo}/actions/variables`
+  (set `ENABLE_PAGES`; distinct from the Secrets permission the App already
+  holds).
+
+"Request nothing new" (§1) is superseded for exactly these two. Granting them is
+an operator action in the App's GitHub settings and a **breaking permission
+change**: every existing installation (including the org-wide `stagecraft-ing`
+install, id `125344051`) enters a "review updated permissions" state, and the
+App cannot act for that installation until its owner approves. Until the grant
+lands, spec 005's provisioning step 403s and is swallowed best-effort (the stamp
+still reaches born-green), so the code ships dormant and the grant plus
+re-consent is sequenced deliberately, never silently. No code in
+`backend/tenants/` changes: the permission set lives in the App's GitHub
+configuration, and this amendment is the design record of the decision.
 
 ## 5. Out of scope
 

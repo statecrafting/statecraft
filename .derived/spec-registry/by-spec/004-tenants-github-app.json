@@ -26,6 +26,6 @@
     "summary": "The tenancy spine of milestone M2: a user authenticates against the control plane (embedded rauthy, chassis auth), creates a tenant, and installs the Stagecraft GitHub App into their own GitHub org; from then on everything the platform does for them keys off the installation_id and happens inside their org. Nobody joins our org; code sovereignty is the product's first-class property. This spec owns the tenants service: tenant + installation records on CoreLedger, the App installation handshake, webhook receipt, and an installation-token mint helper the factory (spec 005) consumes.\n",
     "title": "Tenants: OAuth login + per-org GitHub App installation"
   },
-  "shardHash": "ff5d8834cb655b6d8cc26d8caa9835dd0cb14c066d4fb1087fd8769d516cbacc",
+  "shardHash": "ba3216ef507cdacaa4c1f726b253c7b88891e53aa70d895d9662e9b3028f5c80",
   "specVersion": "1.1.0"
 }

@@ -41,7 +41,7 @@ import {
   pushInitialCommit,
   resolveRef,
 } from "./git";
-import { createRepo, getRepo, openPullRequest, waitForVerify } from "./github";
+import { createRepo, enablePages, getRepo, openPullRequest, setRepoVariable, waitForVerify } from "./github";
 import { runScaffold } from "./scaffold";
 import { fail, getJob, patchJob, transition } from "./store";
 
@@ -194,6 +194,25 @@ export async function runStampPipeline(jobId: string): Promise<void> {
         token,
         message: `Stamp ${job.appName} from enrahitu ${pinnedSha.slice(0, 7)}`,
       });
+    }
+
+    // 6b. Provision GitHub Pages when the stamp opted in (create mode only).
+    // Best-effort: the repo is pushed and Pages is an optional preview, so a
+    // failure here (the App lacking the Pages/Variables grant per spec 004 §1,
+    // or Pages already enabled) is logged and the stamp continues to verify.
+    // Adopt lands via a PR, so ENABLE_PAGES-on-push would not apply until merge.
+    if (job.pages && job.mode !== "adopt") {
+      try {
+        await enablePages(job.installationId, job.org, repoName);
+        await setRepoVariable(job.installationId, job.org, repoName, "ENABLE_PAGES", "true");
+        logInfo("factory.pages_enabled", { jobId, repo: `${job.org}/${repoName}` });
+      } catch (err) {
+        logError("factory.pages_enable_failed", {
+          jobId,
+          repo: `${job.org}/${repoName}`,
+          message: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     // 7. Watch the born-green verify run (on the pushed SHA / PR head).

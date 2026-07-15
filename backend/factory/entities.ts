@@ -34,6 +34,11 @@ export class StampJob {
   // scaffold verb's --frontend. Empty means the template's contract default.
   @Column() frontend = "";
   @Column() mode: StampMode = "create";
+  // Opt-in Pages provisioning (create mode): after push, enable GitHub Pages
+  // (source = Actions) and set ENABLE_PAGES=true so the born-with pages.yml
+  // auto-publishes the SPA preview (enrahitu spec 013). Off by default; needs
+  // the App's Pages: write + Variables: write grant (spec 004 §1).
+  @Column({ type: "boolean" }) pages = false;
   @Column() templateRef = "";
   @Column() contractVersion = "";
   @Column() posture: Posture = "none";

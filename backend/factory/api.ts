@@ -24,6 +24,7 @@ export interface StampJobView {
   org: string;
   frontend: string;
   mode: string;
+  pages: boolean;
   templateRef: string;
   contractVersion: string;
   posture: string;
@@ -44,6 +45,7 @@ function toView(j: StampJob): StampJobView {
     org: j.org,
     frontend: j.frontend,
     mode: j.mode,
+    pages: j.pages,
     templateRef: j.templateRef,
     contractVersion: j.contractVersion,
     posture: j.posture,
@@ -65,6 +67,8 @@ interface CreateStampRequest {
   posture: string;
   /** How the stamp lands: "create" a new repo (default) or "adopt" an existing one. */
   mode?: string;
+  /** Opt in (create mode) to provisioning GitHub Pages on the new repo. */
+  pages?: boolean;
 }
 
 /**
@@ -74,7 +78,7 @@ interface CreateStampRequest {
  */
 export const createStamp = api(
   { expose: true, auth: true, method: "POST", path: "/api/v1/tenants/:id/stamps" },
-  async ({ id, appName, targetOrg, frontend, posture, mode }: CreateStampRequest): Promise<StampJobView> => {
+  async ({ id, appName, targetOrg, frontend, posture, mode, pages }: CreateStampRequest): Promise<StampJobView> => {
     const auth = getAuthData()!;
     const tenant = await getOwnedTenant(id, auth.userID);
     if (!tenant) throw APIError.notFound("tenant not found");
@@ -107,6 +111,7 @@ export const createStamp = api(
       // like app_name's pattern. Empty means the template default.
       frontend: (frontend ?? "").trim(),
       mode: stampMode,
+      pages: pages ?? false,
       templateRef: TEMPLATE_REF,
       contractVersion: "",
       posture: posture as Posture,
