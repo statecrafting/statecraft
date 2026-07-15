@@ -30,6 +30,9 @@ export class StampJob {
   @Column() installationId = "";
   @Column({ index: true }) appName = "";
   @Column() org = "";
+  // The selected frontend flavor slot (enrahitu spec 015): passed to the
+  // scaffold verb's --frontend. Empty means the template's contract default.
+  @Column() frontend = "";
   @Column() mode: StampMode = "create";
   @Column() templateRef = "";
   @Column() contractVersion = "";

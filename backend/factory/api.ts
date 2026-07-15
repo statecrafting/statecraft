@@ -22,6 +22,7 @@ export interface StampJobView {
   tenantId: string;
   appName: string;
   org: string;
+  frontend: string;
   mode: string;
   templateRef: string;
   contractVersion: string;
@@ -41,6 +42,7 @@ function toView(j: StampJob): StampJobView {
     tenantId: j.tenantId,
     appName: j.appName,
     org: j.org,
+    frontend: j.frontend,
     mode: j.mode,
     templateRef: j.templateRef,
     contractVersion: j.contractVersion,
@@ -72,7 +74,7 @@ interface CreateStampRequest {
  */
 export const createStamp = api(
   { expose: true, auth: true, method: "POST", path: "/api/v1/tenants/:id/stamps" },
-  async ({ id, appName, targetOrg, posture, mode }: CreateStampRequest): Promise<StampJobView> => {
+  async ({ id, appName, targetOrg, frontend, posture, mode }: CreateStampRequest): Promise<StampJobView> => {
     const auth = getAuthData()!;
     const tenant = await getOwnedTenant(id, auth.userID);
     if (!tenant) throw APIError.notFound("tenant not found");
@@ -100,6 +102,10 @@ export const createStamp = api(
       installationId: inst.installationId,
       appName: name,
       org,
+      // Frontend flavor (enrahitu spec 015): normalized here, validated against
+      // the contract's [slots].frontend.allowed by the pipeline (validateSlots),
+      // like app_name's pattern. Empty means the template default.
+      frontend: (frontend ?? "").trim(),
       mode: stampMode,
       templateRef: TEMPLATE_REF,
       contractVersion: "",

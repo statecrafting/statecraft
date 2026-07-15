@@ -58,7 +58,7 @@ endpoints, CoreLedger entities, template cache, stamp pipeline.
   `[slots]`. Reject stamps whose contract the factory does not support,
   with a precise error.
 - **Entities**: `StampJob` (id, tenantId, installationId, appName,
-  org, templateRef, contractVersion, posture, status
+  org, frontend, templateRef, contractVersion, posture, status
   queued|stamping|pushing|verifying|green|failed, checksRunId?,
   certHash?, createdAt, updatedAt, error?). `posture` is persisted on
   the job because step 3 builds the cert from the request's posture and
@@ -141,9 +141,10 @@ Adopt is a *mode* of the one pinned chassis, not multi-template support
 ## 4. Acceptance
 
 - Unit: contract parsing (accept 0.1/0.2/0.3 fixtures, reject 1.0),
-  slot validation, job state machine transitions, cert hash matches an
-  independently computed keysorted sha256 fixture, the stamp-mode guard,
-  and the ledger attestation payload shape.
+  slot validation (including the frontend flavor default/allowed/reject),
+  the frontend flavor round-trip on `StampJob`, job state machine
+  transitions, cert hash matches an independently computed keysorted sha256
+  fixture, the stamp-mode guard, and the ledger attestation payload shape.
 - E2E (manual, documented): **create** stamps `smoke-<date>` into the
   test org from spec 004's installation and the job reaches `green` with
   a green verify run; **adopt** stamps the chassis onto an existing test
@@ -174,6 +175,19 @@ create vs adopt and anchors every cert before any repo mutation. Unit tests
 cover the mode guard, the attestation payload, and the job round-trip of the
 new columns; the adopt IO path (clone/overlay/PR) is manual-E2E like
 create's. typecheck + vitest + spine gates green.
+
+AMENDED 2026-07-15 (frontend flavor wire-through): the tenant's `frontend`
+choice now flows end to end. It was already declared on the create-stamp
+request and validated by `validateSlots`, but the API handler dropped it: it
+never reached the job or the scaffold verb, so every stamp used the template
+default (vue). The handler now reads and normalizes `frontend`, `StampJob`
+persists it (new `frontend` column, like `mode`/`prUrl` before it), and the
+pipeline passes it into `validateSlots` (authoritative check against
+`[slots].frontend.allowed`, enrahitu spec 015) and on to the scaffold verb's
+`--frontend`. `StampJobView` exposes it for the status GETs. Unit tests: the
+`StampJob` round-trip covers the new column; the `validateSlots` frontend cases
+(default, allowed, reject) were already green. typecheck + vitest + spine gates
+green.
 
 ## 5. Out of scope
 

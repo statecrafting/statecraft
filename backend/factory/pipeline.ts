@@ -76,7 +76,14 @@ export async function runStampPipeline(jobId: string): Promise<void> {
     const contract = readContract(await readFile(join(workdir, "template.toml"), "utf8"));
     assertSupportedContract(contract);
     await patchJob(jobId, { contractVersion: contract.contractVersion });
-    const slots = validateSlots(contract, { appName: job.appName, org: job.org });
+    const slots = validateSlots(contract, {
+      appName: job.appName,
+      org: job.org,
+      // The tenant's flavor choice (persisted on the job) reaches the scaffold
+      // verb here; validateSlots checks it against [slots].frontend.allowed and
+      // resolves the contract default when empty (enrahitu spec 015).
+      frontend: job.frontend || undefined,
+    });
 
     // 3. Build the born-with cert (gated on contract support).
     let certPath: string | undefined;

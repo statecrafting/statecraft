@@ -36,6 +36,7 @@ export interface CreateJobInput {
   installationId: string;
   appName: string;
   org: string;
+  frontend: string;
   mode: StampMode;
   templateRef: string;
   contractVersion: string;
@@ -66,6 +67,7 @@ export async function createOrGetLiveJob(
       installationId: input.installationId,
       appName: input.appName,
       org: input.org,
+      frontend: input.frontend,
       mode: input.mode,
       templateRef: input.templateRef,
       contractVersion: input.contractVersion,
