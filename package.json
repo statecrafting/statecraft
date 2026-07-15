@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "enrahitu-dev",
     "build:app": "enrahitu-build",
-    "build:addon": "npm --prefix addon/governance-native install && npm --prefix addon/governance-native run build",
+    "build:addon": "npm --prefix addon/governance-native install && npm --prefix addon/governance-native run build && npm --prefix addon/fleet-native install && npm --prefix addon/fleet-native run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "generate-keys": "tsx scripts/generate-keys.ts",
@@ -23,6 +23,7 @@
   "dependencies": {
     "@enrahitu/hiqlite-native": "0.1.0",
     "@stagecraft/governance-native": "file:./addon/governance-native",
+    "@stagecraft/fleet-native": "file:./addon/fleet-native",
     "@libsql/client": "^0.17.4",
     "encore.dev": "^1.57.9",
     "jsonwebtoken": "^9.0.3",

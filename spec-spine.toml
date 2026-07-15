@@ -14,14 +14,14 @@ allowed = []   # empty: the `kind` field is free-text / disabled
 specs_dir     = "specs"
 derived_dir   = ".derived"
 standards_dir = "standards/spec"
-# The governance napi addon (spec 008) is a standalone Rust crate and npm
-# package. The app shell (spec 002) brings the root package.json (an Encore
-# app, spec-spine key -> 002); the SPA is the webapp/ package (spec 007,
-# spec-spine key -> 007), which replaced the chassis frontend/ placeholder.
-# The Encore toolchain and hiqlite addon are pinned @enrahitu/* dependencies,
-# not in-tree packages, so they are not listed here.
-standalone_rust_workspaces = ["addon/governance-native"]
-standalone_npm_packages    = ["addon/governance-native", "webapp"]
+# The governance (spec 008) and fleet (spec 006) napi addons are standalone
+# Rust crates and npm packages. The app shell (spec 002) brings the root
+# package.json (an Encore app, spec-spine key -> 002); the SPA is the webapp/
+# package (spec 007, spec-spine key -> 007), which replaced the chassis
+# frontend/ placeholder. The Encore toolchain and hiqlite addon are pinned
+# @enrahitu/* dependencies, not in-tree packages, so they are not listed here.
+standalone_rust_workspaces = ["addon/governance-native", "addon/fleet-native"]
+standalone_npm_packages    = ["addon/governance-native", "addon/fleet-native", "webapp"]
 
 [index]
 # Governance surfaces beyond the always-hashed core. Service manifests are

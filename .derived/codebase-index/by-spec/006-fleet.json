@@ -1,27 +1,29 @@
 {
-  "diagnostics": {
-    "errors": [],
-    "warnings": [
-      {
-        "code": "W-001",
-        "message": "spec '006-fleet' directory unit 'fleet/' is not a directory",
-        "path": "fleet/"
-      },
-      {
-        "code": "W-001",
-        "message": "spec '006-fleet' directory unit 'addon/fleet-native/' is not a directory",
-        "path": "addon/fleet-native/"
-      }
-    ]
-  },
   "mapping": {
     "dependsOn": [
       "005-factory-service"
     ],
-    "implementingPaths": [],
+    "implementingPaths": [
+      {
+        "path": "addon/fleet-native",
+        "source": "manifest-metadata"
+      },
+      {
+        "path": "addon/fleet-native/",
+        "source": "spec-edge"
+      },
+      {
+        "path": "backend/fleet/",
+        "source": "spec-edge"
+      }
+    ],
     "resolvedUnits": [
       {
-        "locations": [],
+        "locations": [
+          {
+            "file": "addon/fleet-native/"
+          }
+        ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
@@ -30,12 +32,16 @@
         }
       },
       {
-        "locations": [],
+        "locations": [
+          {
+            "file": "backend/fleet/"
+          }
+        ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
           "kind": "directory",
-          "path": "fleet/"
+          "path": "backend/fleet/"
         }
       }
     ],
@@ -43,5 +49,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "d572decb7d11fd44d15a0f90dfa4a37f0c68e40538cbf26ab9b41dcd50f7825a"
+  "shardHash": "1769cd88bb920238f0ce2ac71befc0c7070fd0f24bbb58419ba6bb61fefe82e5"
 }
