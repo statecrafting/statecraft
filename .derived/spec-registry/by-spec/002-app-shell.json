@@ -91,7 +91,7 @@
       }
     ],
     "id": "002-app-shell",
-    "implementation": "in-progress",
+    "implementation": "complete",
     "sectionHeadings": [
       "002: App shell",
       "0. Cross-repo gate (read first)",
@@ -99,6 +99,7 @@
       "2. How the chassis was brought in",
       "3. Constraints",
       "4. Acceptance",
+      "Status (2026-07-15)",
       "5. Out of scope"
     ],
     "specPath": "specs/002-app-shell/spec.md",
@@ -106,6 +107,6 @@
     "summary": "Stagecraft becomes a running EnRaHiTu app: the slimmed chassis from stagecraft-ing/enrahitu is brought into this repo (the two-directory backend/ + frontend/ layout, CoreLedger, auth baseline, rauthy proxy, health, packaging, verify workflow; the Encore toolchain and the hiqlite addon arrive as pinned @enrahitu/* npm packages, not vendored source), stamped with app name \"stagecraft\". After this spec the control plane boots, authenticates, and tests green; every later service spec (004+) adds Encore services onto this shell. This is deliberate dogfooding: the platform is stamped from the same template it will stamp for customers.\n",
     "title": "The control plane's EnRaHiTu app shell"
   },
-  "shardHash": "2ca58401524dbe9818ea254b2b458543c717ae75551c83e0ccb1c6a27391634d",
+  "shardHash": "037ddd8dd8245d72d80c09469f75c008bc3f141a3f0af87c1ec335fe5f65cef5",
   "specVersion": "1.1.0"
 }

@@ -3,7 +3,7 @@ id: "002-app-shell"
 title: "The control plane's EnRaHiTu app shell"
 status: approved
 created: "2026-07-14"
-implementation: in-progress
+implementation: complete
 depends_on:
   - "001-stagecraft-thesis"
 establishes:
@@ -164,6 +164,26 @@ enrahitu 018 §4 delegated to the first stamped consumer.
   and the governance service answers (`GET /governance/verify` -> ok).
 - verify.yml runs green on main.
 - `spec-spine lint --fail-on-warn` and `spec-spine index check` green.
+
+## Status (2026-07-15)
+
+`implementation: complete`; acceptance holds in full.
+
+- The §0 cross-repo gate is resolved: enrahitu 018 (packaged chassis) and
+  019 (frontend/backend layout) are `implementation: complete` at
+  enrahitu commit `83a4551`, and the slimmed two-directory import in §2
+  was performed against that commit (the delegated clean-clone acceptance).
+- §4 build/test acceptance (item 1) and green-on-main (item 3) hold via
+  the `verify` workflow on the latest main commit: `npm ci`, `build:addon`,
+  `build:web`, `build:app`, `typecheck`, `npm test` (both CoreLedger
+  drivers), and the webapp typecheck + component tests all pass.
+- §4 dev-boot acceptance (item 2) live-verified against a local
+  `npm run dev` (Encore on :4000, CoreLedger on the dev Postgres):
+  `GET /health` -> 200 `{"status":"ok","ledger":"ok","app":"enrahitu"}`;
+  `GET /hiq/health` -> 200 `{"status":"ok"}`; `GET /governance/verify`
+  -> 200 `{"ok":true,"seq":0}`.
+- §4 spine gates (item 4): `spec-spine lint --fail-on-warn` reports
+  0 errors / 0 warnings and `spec-spine index check` is fresh.
 
 ## 5. Out of scope
 
