@@ -10,9 +10,10 @@ import { getAuthData } from "~encore/auth";
 
 import { getOwnedTenant, listInstallationsForTenant } from "../tenants/store";
 
+import { isStampMode } from "./attest";
 import { isPosture } from "./cert";
 import { TEMPLATE_REF } from "./config";
-import type { Posture, StampJob } from "./entities";
+import type { Posture, StampJob, StampMode } from "./entities";
 import { runStampPipeline } from "./pipeline";
 import { createOrGetLiveJob, getJob, listJobsForTenant } from "./store";
 
@@ -21,11 +22,13 @@ export interface StampJobView {
   tenantId: string;
   appName: string;
   org: string;
+  mode: string;
   templateRef: string;
   contractVersion: string;
   posture: string;
   status: string;
   certHash: string | null;
+  prUrl: string | null;
   checksRunId: string | null;
   error: string | null;
   createdAt: string;
@@ -38,11 +41,13 @@ function toView(j: StampJob): StampJobView {
     tenantId: j.tenantId,
     appName: j.appName,
     org: j.org,
+    mode: j.mode,
     templateRef: j.templateRef,
     contractVersion: j.contractVersion,
     posture: j.posture,
     status: j.status,
     certHash: j.certHash,
+    prUrl: j.prUrl,
     checksRunId: j.checksRunId,
     error: j.error,
     createdAt: j.createdAt.toISOString(),
@@ -56,15 +61,18 @@ interface CreateStampRequest {
   targetOrg: string;
   frontend?: string;
   posture: string;
+  /** How the stamp lands: "create" a new repo (default) or "adopt" an existing one. */
+  mode?: string;
 }
 
 /**
  * POST /api/v1/tenants/:id/stamps: queue a stamp job and kick the pipeline.
  * Idempotent: a live job for the same tenant + appName is returned as-is.
+ * `mode` selects create (new repo, default) vs adopt (PR onto an existing repo).
  */
 export const createStamp = api(
   { expose: true, auth: true, method: "POST", path: "/api/v1/tenants/:id/stamps" },
-  async ({ id, appName, targetOrg, posture }: CreateStampRequest): Promise<StampJobView> => {
+  async ({ id, appName, targetOrg, posture, mode }: CreateStampRequest): Promise<StampJobView> => {
     const auth = getAuthData()!;
     const tenant = await getOwnedTenant(id, auth.userID);
     if (!tenant) throw APIError.notFound("tenant not found");
@@ -75,6 +83,10 @@ export const createStamp = api(
     if (!org) throw APIError.invalidArgument("targetOrg is required");
     if (!posture || !isPosture(posture)) {
       throw APIError.invalidArgument("posture is required and must be one of none, assisted, autonomous");
+    }
+    const stampMode: StampMode = (mode ?? "create").trim() as StampMode;
+    if (!isStampMode(stampMode)) {
+      throw APIError.invalidArgument("mode must be one of create, adopt");
     }
 
     const installs = await listInstallationsForTenant(id);
@@ -88,6 +100,7 @@ export const createStamp = api(
       installationId: inst.installationId,
       appName: name,
       org,
+      mode: stampMode,
       templateRef: TEMPLATE_REF,
       contractVersion: "",
       posture: posture as Posture,

@@ -11,9 +11,12 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { governance } from "~encore/clients";
+
 import { logError, logInfo } from "../lib/logger";
 import { getInstallationToken } from "../tenants/github-app";
 
+import { stampAttestationPayload, stampSubject } from "./attest";
 import { buildCert, certHash } from "./cert";
 import {
   FACTORY_STAMPED_BY_ID,
@@ -30,8 +33,15 @@ import {
   supportsCert,
   validateSlots,
 } from "./contract";
-import { ensureTemplateCache, exportPinned, pushInitialCommit, resolveRef } from "./git";
-import { createRepo, waitForVerify } from "./github";
+import {
+  cloneExisting,
+  ensureTemplateCache,
+  exportPinned,
+  overlayCommitPushBranch,
+  pushInitialCommit,
+  resolveRef,
+} from "./git";
+import { createRepo, getRepo, openPullRequest, waitForVerify } from "./github";
 import { runScaffold } from "./scaffold";
 import { fail, getJob, patchJob, transition } from "./store";
 
@@ -51,6 +61,7 @@ export async function runStampPipeline(jobId: string): Promise<void> {
   const job = await getJob(jobId);
   if (!job) return;
   let workdir: string | undefined;
+  let adoptRepoDir: string | undefined;
 
   try {
     await transition(jobId, "stamping");
@@ -110,26 +121,80 @@ export async function runStampPipeline(jobId: string): Promise<void> {
     if (hash) await patchJob(jobId, { certHash: hash });
     if (certPath) await rm(certPath, { force: true }).catch(() => {});
 
-    // 5. Create the customer repo.
+    // 4b. Anchor the born-with cert in the governance attestation ledger (spec
+    // 008), so the repo-local cert and the platform ledger are mutually
+    // checkable (enrahitu spec 012 §4). Done before any repo mutation: a stamp
+    // never lands a repo without its anchor.
+    if (hash) {
+      await governance.record({
+        kind: "stamp",
+        subject: stampSubject({ org: job.org, appName: job.appName }),
+        actor: FACTORY_STAMPED_BY_ID,
+        payload: stampAttestationPayload({
+          mode: job.mode,
+          appName: job.appName,
+          org: job.org,
+          templateCommit: pinnedSha,
+          contractVersion: contract.contractVersion,
+          posture: job.posture,
+        }),
+        certHash: hash,
+      });
+      logInfo("factory.cert_anchored", { jobId, certHash: hash });
+    }
+
+    // 5-6. Land the stamped tree: create a fresh repo (initial commit) or adopt
+    // an existing one (PR the chassis onto its default branch). Both yield the
+    // SHA the born-green verify then runs on.
     await transition(jobId, "pushing");
-    const repo = await createRepo(job.installationId, job.org, job.appName);
+    const repoName = job.appName;
+    let headSha: string;
+    if (job.mode === "adopt") {
+      const existing = await getRepo(job.installationId, job.org, repoName);
+      adoptRepoDir = await mkdtemp(join(tmpdir(), "factory-adopt-"));
+      const cloneToken = await getInstallationToken(job.installationId);
+      await cloneExisting({ org: job.org, repo: repoName, token: cloneToken, destDir: adoptRepoDir });
+      const branch = `factory/adopt-${pinnedSha.slice(0, 12)}`;
+      const pushToken = await getInstallationToken(job.installationId);
+      headSha = await overlayCommitPushBranch({
+        repoDir: adoptRepoDir,
+        overlayDir: workdir,
+        branch,
+        message: `Adopt enrahitu chassis @ ${pinnedSha.slice(0, 7)} into ${repoName}`,
+        org: job.org,
+        repo: repoName,
+        token: pushToken,
+      });
+      const pr = await openPullRequest(job.installationId, job.org, repoName, {
+        head: branch,
+        base: existing.defaultBranch,
+        title: `Adopt the enrahitu chassis (${job.appName})`,
+        body:
+          `Stagecraft Factory stamped the enrahitu chassis (contract ${contract.contractVersion}) ` +
+          `at \`${pinnedSha}\` onto this existing repo. Files unique to the repo are preserved; ` +
+          `chassis files were overlaid. Review the diff, then merge.\n\n` +
+          (hash ? `Born-with cert hash: \`${hash}\` (anchored in the platform ledger).\n` : ""),
+      });
+      await patchJob(jobId, { prUrl: pr.url });
+      logInfo("factory.adopt_pr_opened", { jobId, pr: pr.url });
+    } else {
+      const repo = await createRepo(job.installationId, job.org, repoName);
+      const token = await getInstallationToken(job.installationId);
+      headSha = await pushInitialCommit({
+        workdir,
+        org: job.org,
+        repo: repo.name,
+        token,
+        message: `Stamp ${job.appName} from enrahitu ${pinnedSha.slice(0, 7)}`,
+      });
+    }
 
-    // 6. Push the stamped tree.
-    const token = await getInstallationToken(job.installationId);
-    const headSha = await pushInitialCommit({
-      workdir,
-      org: job.org,
-      repo: repo.name,
-      token,
-      message: `Stamp ${job.appName} from enrahitu ${pinnedSha.slice(0, 7)}`,
-    });
-
-    // 7. Watch the born-green verify run.
+    // 7. Watch the born-green verify run (on the pushed SHA / PR head).
     await transition(jobId, "verifying");
     const result = await waitForVerify(
       job.installationId,
       job.org,
-      repo.name,
+      repoName,
       headSha,
       VERIFY_TIMEOUT_MS,
       VERIFY_POLL_INTERVAL_MS,
@@ -138,12 +203,18 @@ export async function runStampPipeline(jobId: string): Promise<void> {
     if (result.runId) patch.checksRunId = result.runId;
     if (!result.green) patch.error = "born-green verify run did not pass";
     await transition(jobId, result.green ? "green" : "failed", patch);
-    logInfo("factory.stamp_done", { jobId, green: result.green, repo: repo.fullName });
+    logInfo("factory.stamp_done", {
+      jobId,
+      mode: job.mode,
+      green: result.green,
+      repo: `${job.org}/${repoName}`,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logError("factory.stamp_failed", { jobId, message });
     await fail(jobId, message).catch(() => {});
   } finally {
     if (workdir) await rm(workdir, { recursive: true, force: true }).catch(() => {});
+    if (adoptRepoDir) await rm(adoptRepoDir, { recursive: true, force: true }).catch(() => {});
   }
 }

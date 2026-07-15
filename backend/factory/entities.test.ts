@@ -57,6 +57,7 @@ for (const arm of arms) {
         appName: "smoke-app",
         org: "stagecraft-ing",
         templateRef: "34134f9a48ddff75cca1df4f9a15e06140357bdd",
+        mode: "adopt" as const,
         contractVersion: "0.5.0",
         posture: "assisted" as const,
         status: "queued" as const,
@@ -65,21 +66,25 @@ for (const arm of arms) {
 
       const back = await repo.findById(job.id);
       expect(back?.appName).toBe("smoke-app");
+      expect(back?.mode).toBe("adopt");
       expect(back?.posture).toBe("assisted");
       expect(back?.status).toBe("queued");
       expect(back?.certHash).toBeNull();
+      expect(back?.prUrl).toBeNull();
       expect(back?.error).toBeNull();
 
       await repo.updateById(job.id, {
         status: "green",
         certHash: "ad33056e",
         checksRunId: "999",
+        prUrl: "https://github.com/stagecraft-ing/smoke-app/pull/1",
         updatedAt: new Date(),
       });
       const done = await repo.findById(job.id);
       expect(done?.status).toBe("green");
       expect(done?.certHash).toBe("ad33056e");
       expect(done?.checksRunId).toBe("999");
+      expect(done?.prUrl).toBe("https://github.com/stagecraft-ing/smoke-app/pull/1");
     });
   });
 }

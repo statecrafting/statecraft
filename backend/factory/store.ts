@@ -9,7 +9,7 @@
  */
 import { ledger } from "../core/ledger";
 
-import { type Posture, StampJob } from "./entities";
+import { type Posture, type StampMode, StampJob } from "./entities";
 import { canTransition, InvalidTransitionError, isLive, isTerminal, type StampStatus } from "./jobs";
 
 export const dbReady: Promise<void> = ledger().init([StampJob]);
@@ -36,6 +36,7 @@ export interface CreateJobInput {
   installationId: string;
   appName: string;
   org: string;
+  mode: StampMode;
   templateRef: string;
   contractVersion: string;
   posture: Posture;
@@ -65,6 +66,7 @@ export async function createOrGetLiveJob(
       installationId: input.installationId,
       appName: input.appName,
       org: input.org,
+      mode: input.mode,
       templateRef: input.templateRef,
       contractVersion: input.contractVersion,
       posture: input.posture,
@@ -81,7 +83,7 @@ export async function createOrGetLiveJob(
 export async function transition(
   id: string,
   to: StampStatus,
-  patch: Partial<Pick<StampJob, "certHash" | "checksRunId" | "error">> = {},
+  patch: Partial<Pick<StampJob, "certHash" | "checksRunId" | "prUrl" | "error">> = {},
 ): Promise<StampJob> {
   await dbReady;
   const now = new Date();
@@ -98,7 +100,7 @@ export async function transition(
 /** Set fields without a status change (e.g. contractVersion / certHash mid-stamping). */
 export async function patchJob(
   id: string,
-  patch: Partial<Pick<StampJob, "certHash" | "checksRunId" | "contractVersion">>,
+  patch: Partial<Pick<StampJob, "certHash" | "checksRunId" | "contractVersion" | "prUrl">>,
 ): Promise<void> {
   await dbReady;
   await jobs().updateById(id, { ...patch, updatedAt: new Date() });

@@ -15,6 +15,14 @@ import type { StampStatus } from "./jobs";
 
 export type Posture = "none" | "assisted" | "autonomous";
 
+/**
+ * How the stamp lands (spec 005 §3): `create` births a fresh repo in the
+ * customer org (the stamped tree is the initial commit); `adopt` stamps the
+ * chassis onto an EXISTING repo via a pull request, so a repo that already
+ * carries its own content keeps it and a human reviews the overlay before merge.
+ */
+export type StampMode = "create" | "adopt";
+
 @Entity("stamp_job")
 export class StampJob {
   @Column({ primary: true }) id = randomUUID();
@@ -22,12 +30,15 @@ export class StampJob {
   @Column() installationId = "";
   @Column({ index: true }) appName = "";
   @Column() org = "";
+  @Column() mode: StampMode = "create";
   @Column() templateRef = "";
   @Column() contractVersion = "";
   @Column() posture: Posture = "none";
   @Column({ index: true }) status: StampStatus = "queued";
   @Column({ nullable: true }) checksRunId: string | null = null;
   @Column({ nullable: true }) certHash: string | null = null;
+  // adopt mode only: the URL of the pull request the stamp opened.
+  @Column({ nullable: true }) prUrl: string | null = null;
   @Column({ nullable: true }) error: string | null = null;
   @Column({ type: "timestamp" }) createdAt = new Date();
   @Column({ type: "timestamp" }) updatedAt = new Date();

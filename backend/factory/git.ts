@@ -9,7 +9,7 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
@@ -83,5 +83,69 @@ export async function pushInitialCommit(input: PushInput): Promise<string> {
   const remote = `https://x-access-token:${token}@github.com/${org}/${repo}.git`;
   await git(["-C", workdir, "remote", "add", "origin", remote]);
   await git(["-C", workdir, "push", "--quiet", "origin", "main"]);
+  return head;
+}
+
+export interface CloneInput {
+  org: string;
+  repo: string;
+  token: string;
+  destDir: string;
+}
+
+/**
+ * Shallow-clone an existing repo's default branch (adopt mode, spec 005 §3),
+ * using the tenant's installation token in the remote URL. Returns the default
+ * branch name so the pipeline can PR back into it.
+ */
+export async function cloneExisting(input: CloneInput): Promise<{ defaultBranch: string }> {
+  const { org, repo, token, destDir } = input;
+  const remote = `https://x-access-token:${token}@github.com/${org}/${repo}.git`;
+  await git(["clone", "--quiet", "--depth", "1", remote, destDir]);
+  const branch = (await git(["-C", destDir, "rev-parse", "--abbrev-ref", "HEAD"])).trim();
+  return { defaultBranch: branch };
+}
+
+export interface OverlayInput {
+  /** A checkout of the existing repo (from cloneExisting). */
+  repoDir: string;
+  /** The stamped chassis tree to overlay on top. */
+  overlayDir: string;
+  branch: string;
+  message: string;
+  org: string;
+  repo: string;
+  token: string;
+}
+
+/**
+ * Overlay the stamped chassis onto the cloned repo on a fresh branch, commit,
+ * and push (adopt mode, spec 005 §3). The overlay merges the stamped tree's
+ * files over the repo's: chassis files land, same-path files are overwritten,
+ * and files unique to the repo (e.g. an app's own crate/CI) are preserved. The
+ * stamped tree carries no `.git`, so the repo's history is untouched. Returns the
+ * pushed head SHA (the born-green verify then runs on it).
+ */
+export async function overlayCommitPushBranch(input: OverlayInput): Promise<string> {
+  const { repoDir, overlayDir, branch, message, org, repo, token } = input;
+  await git(["-C", repoDir, "checkout", "-b", branch, "--quiet"]);
+  await cp(overlayDir, repoDir, { recursive: true, force: true });
+  await git(["-C", repoDir, "add", "-A"]);
+  await git([
+    "-C",
+    repoDir,
+    "-c",
+    `user.name=${FACTORY_GIT_AUTHOR_NAME}`,
+    "-c",
+    `user.email=${FACTORY_GIT_AUTHOR_EMAIL}`,
+    "commit",
+    "--quiet",
+    "-m",
+    message,
+  ]);
+  const head = (await git(["-C", repoDir, "rev-parse", "HEAD"])).trim();
+  const remote = `https://x-access-token:${token}@github.com/${org}/${repo}.git`;
+  await git(["-C", repoDir, "remote", "set-url", "origin", remote]);
+  await git(["-C", repoDir, "push", "--quiet", "origin", branch]);
   return head;
 }

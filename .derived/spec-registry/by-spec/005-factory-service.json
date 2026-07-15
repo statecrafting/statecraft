@@ -17,14 +17,15 @@
       "1. Cross-repo dependencies (read first)",
       "2. Territory",
       "3. Behavior",
+      "3.1 Stamp modes: create and adopt",
       "4. Acceptance",
       "5. Out of scope"
     ],
     "specPath": "specs/005-factory-service/spec.md",
     "status": "approved",
-    "summary": "The factory turns \"customer wants an app named X\" into a born-green repo in the customer's GitHub org: clone the pinned enrahitu template, read its template.toml contract (and nothing else), run the scaffold verb with the slot values, emit the born-with certificate, create the repo via the tenant's installation token, push, and watch the born-with verify workflow until green. Completes milestone M2 together with spec 004. The contract boundary is absolute: any factory behavior that depends on template internals beyond template.toml is a defect.\n",
+    "summary": "The factory turns \"customer wants an app named X\" into a born-green repo in the customer's GitHub org: clone the pinned enrahitu template, read its template.toml contract (and nothing else), run the scaffold verb with the slot values, emit the born-with certificate and anchor it in the governance ledger, then land it: create a new repo and push (create mode) or open a pull request onto an existing repo (adopt mode), and watch the born-with verify workflow until green. Completes milestone M2 together with spec 004. The contract boundary is absolute: any factory behavior that depends on template internals beyond template.toml is a defect.\n",
     "title": "Factory: stamp EnRaHiTu apps into customer orgs"
   },
-  "shardHash": "e48145181b990b52bc64ad7a8c47fcb22d225fdcab2394bf76dbe74de8177ba3",
+  "shardHash": "8a1d6f11bdad55348edbeb8bb038983322971205792ae42f4a3c1f6781a84ee5",
   "specVersion": "1.1.0"
 }

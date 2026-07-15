@@ -71,6 +71,63 @@ export async function createRepo(
   };
 }
 
+export interface ExistingRepo {
+  fullName: string;
+  defaultBranch: string;
+  htmlUrl: string;
+}
+
+/**
+ * Fetch an existing repo (adopt mode, spec 005 §3). Throws if it does not exist
+ * or the installation cannot see it, so the pipeline fails the job with a precise
+ * error instead of pushing into the void.
+ */
+export async function getRepo(
+  installationId: string,
+  org: string,
+  repo: string,
+): Promise<ExistingRepo> {
+  const token = await getInstallationToken(installationId);
+  const r = await gh<RawRepo>(
+    `/repos/${encodeURIComponent(org)}/${encodeURIComponent(repo)}`,
+    { token },
+  );
+  return { fullName: r.full_name, defaultBranch: r.default_branch || "main", htmlUrl: r.html_url };
+}
+
+export interface PullRequest {
+  url: string;
+  number: number;
+}
+
+interface RawPull {
+  html_url: string;
+  number: number;
+}
+
+/**
+ * Open a pull request from the stamp branch into the repo's default branch
+ * (adopt mode, spec 005 §3). The PR diff is the reconciliation surface a human
+ * reviews before merge; the born-green verify then runs on the PR head.
+ */
+export async function openPullRequest(
+  installationId: string,
+  org: string,
+  repo: string,
+  input: { head: string; base: string; title: string; body: string },
+): Promise<PullRequest> {
+  const token = await getInstallationToken(installationId);
+  const pr = await gh<RawPull>(
+    `/repos/${encodeURIComponent(org)}/${encodeURIComponent(repo)}/pulls`,
+    {
+      method: "POST",
+      token,
+      body: { title: input.title, head: input.head, base: input.base, body: input.body },
+    },
+  );
+  return { url: pr.html_url, number: pr.number };
+}
+
 export interface VerifyResult {
   green: boolean;
   runId: string | null;
