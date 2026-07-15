@@ -26,6 +26,6 @@
     "summary": "The factory turns \"customer wants an app named X\" into a born-green repo in the customer's GitHub org: clone the pinned enrahitu template, read its template.toml contract (and nothing else), run the scaffold verb with the slot values, emit the born-with certificate and anchor it in the governance ledger, then land it: create a new repo and push (create mode) or open a pull request onto an existing repo (adopt mode), and watch the born-with verify workflow until green. Completes milestone M2 together with spec 004. The contract boundary is absolute: any factory behavior that depends on template internals beyond template.toml is a defect.\n",
     "title": "Factory: stamp EnRaHiTu apps into customer orgs"
   },
-  "shardHash": "27fe73cf29eeaa7f0873067baa39ac4fe9eede4487218e49019718eb5ac6b29c",
+  "shardHash": "0c077263e6b30e8788120cf05c3a74ce6f2d6b9e75cd7efeafc6023923b7735f",
   "specVersion": "1.1.0"
 }
