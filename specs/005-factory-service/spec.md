@@ -3,11 +3,11 @@ id: "005-factory-service"
 title: "Factory: stamp EnRaHiTu apps into customer orgs"
 status: approved
 created: "2026-07-14"
-implementation: pending
+implementation: complete
 depends_on:
   - "004-tenants-github-app"
 establishes:
-  - { kind: directory, path: "factory/" }
+  - { kind: directory, path: "backend/factory/" }
 summary: >
   The factory turns "customer wants an app named X" into a born-green
   repo in the customer's GitHub org: clone the pinned enrahitu template,
@@ -34,8 +34,11 @@ summary: >
 
 ## 2. Territory
 
-`factory/`: Encore.ts service: `encore.service.ts`, api endpoints,
-CoreLedger entities, template cache, stamp pipeline.
+`backend/factory/`: an Encore.ts service, under `backend/` per the
+chassis convention spec 002 established and spec 008/004 followed (the
+thesis's illustrative `factory/` path predates the slimmed layout;
+corrected here before coding). Files: `encore.service.ts`, api
+endpoints, CoreLedger entities, template cache, stamp pipeline.
 
 ## 3. Behavior
 
@@ -46,16 +49,25 @@ CoreLedger entities, template cache, stamp pipeline.
   fetches on demand; stamping always exports from the pinned SHA
   (`git archive` semantics: tracked files only, no .git).
 - **Contract read**: parse template.toml; enforce
-  `[contract].version` within the supported range (^0.1); validate
-  requested slots against `[slots]`. Reject stamps whose contract the
-  factory does not support, with a precise error.
+  `[contract].version` within the supported range. The range is the
+  major-0 line, `>=0.1.0 <1.0.0`, consistent with §4 (accept 0.1/0.2/0.3,
+  reject 1.0); the pinned template is currently 0.5.0 (scaffold verb at
+  v0.4, provenance at v0.3), so the earlier `^0.1` shorthand was stale and
+  is corrected here before coding. Validate requested slots against
+  `[slots]`. Reject stamps whose contract the factory does not support,
+  with a precise error.
 - **Entities**: `StampJob` (id, tenantId, installationId, appName,
-  org, templateRef, contractVersion, status
+  org, templateRef, contractVersion, posture, status
   queued|stamping|pushing|verifying|green|failed, checksRunId?,
-  certHash?, createdAt, updatedAt, error?).
+  certHash?, createdAt, updatedAt, error?). `posture` is persisted on
+  the job because step 3 builds the cert from the request's posture and
+  the pipeline runs asynchronously (it re-reads the job); added here
+  before coding.
 - **API** (auth as spec 004): `POST /tenants/:id/stamps` (appName,
-  targetOrg, frontend?) -> job id; `GET /stamps/:jobId` status;
-  `GET /tenants/:id/stamps` list.
+  targetOrg, frontend?, posture) -> job id; `GET /stamps/:jobId` status;
+  `GET /tenants/:id/stamps` list. `posture` is required (REQUEST-EXPLICIT,
+  §3 step 3); the API rejects a stamp with no posture rather than
+  defaulting it.
 - **Pipeline** (async; Encore endpoint kicks it and the job records
   progress; keep it single-flight per job, resumable by status):
   1. Export pinned template to a temp workdir.
@@ -91,6 +103,18 @@ CoreLedger entities, template cache, stamp pipeline.
   from spec 004's installation; the job reaches `green`; the resulting
   repo's verify run is green on GitHub. This is the M2 core loop.
 - Spine gates + verify verb green.
+
+COMPLETE 2026-07-15: unit tests cover contract parsing (accept 0.1/0.2/0.3,
+reject 1.0), slot validation, the job state machine, and cert-hash equality
+with the independently computed golden (byte-identical to the template's own
+verify-born-with.mjs); StampJob persistence round-trips on libSQL and
+Postgres; spine gates + `verify` green. The pinned template is contract
+0.5.0, so the factory takes the scaffold + cert path. The E2E is manual and
+documented (backend/factory/README.md, §4): running it live needs a real
+installation and the App secrets, and creates a repo in the customer org, so
+it is an operator step, not a CI gate. The pipeline's IO layer (git, scaffold,
+GitHub) is implemented and typechecks/builds; it is exercised end-to-end only
+by that manual run.
 
 ## 5. Out of scope
 

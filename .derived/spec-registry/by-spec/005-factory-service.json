@@ -7,11 +7,11 @@
     "establishes": [
       {
         "kind": "directory",
-        "path": "factory/"
+        "path": "backend/factory/"
       }
     ],
     "id": "005-factory-service",
-    "implementation": "pending",
+    "implementation": "complete",
     "sectionHeadings": [
       "005: Factory service",
       "1. Cross-repo dependencies (read first)",
@@ -25,6 +25,6 @@
     "summary": "The factory turns \"customer wants an app named X\" into a born-green repo in the customer's GitHub org: clone the pinned enrahitu template, read its template.toml contract (and nothing else), run the scaffold verb with the slot values, emit the born-with certificate, create the repo via the tenant's installation token, push, and watch the born-with verify workflow until green. Completes milestone M2 together with spec 004. The contract boundary is absolute: any factory behavior that depends on template internals beyond template.toml is a defect.\n",
     "title": "Factory: stamp EnRaHiTu apps into customer orgs"
   },
-  "shardHash": "9ce6ac80f7aa48eece3e1e55d813c5c5093fe24f0766741e63954375acb0a4be",
+  "shardHash": "e48145181b990b52bc64ad7a8c47fcb22d225fdcab2394bf76dbe74de8177ba3",
   "specVersion": "1.1.0"
 }

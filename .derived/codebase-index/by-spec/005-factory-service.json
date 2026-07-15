@@ -1,27 +1,26 @@
 {
-  "diagnostics": {
-    "errors": [],
-    "warnings": [
-      {
-        "code": "W-001",
-        "message": "spec '005-factory-service' directory unit 'factory/' is not a directory",
-        "path": "factory/"
-      }
-    ]
-  },
   "mapping": {
     "dependsOn": [
       "004-tenants-github-app"
     ],
-    "implementingPaths": [],
+    "implementingPaths": [
+      {
+        "path": "backend/factory/",
+        "source": "spec-edge"
+      }
+    ],
     "resolvedUnits": [
       {
-        "locations": [],
+        "locations": [
+          {
+            "file": "backend/factory/"
+          }
+        ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
           "kind": "directory",
-          "path": "factory/"
+          "path": "backend/factory/"
         }
       }
     ],
@@ -29,5 +28,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "3ea6d1a43dc99964183b6dab6717c362f45a54d51f4c7c80f3059b129aa1706d"
+  "shardHash": "20a1cd92529a393559d90be14f1929bf2df779cd75c933dc8cc47b9122852805"
 }
