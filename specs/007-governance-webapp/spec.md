@@ -3,7 +3,7 @@ id: "007-governance-webapp"
 title: "Governance UI: Vite + React Router v7 webapp"
 status: approved
 created: "2026-07-14"
-implementation: in-progress
+implementation: complete
 depends_on:
   - "004-tenants-github-app"
 establishes:
@@ -114,17 +114,36 @@ webapp dev server on :5173, CoreLedger on Postgres, mock auth driver):
   spine gates (compile, index check, lint, couple with the waiver) and
   the CI govern gate are green.
 
-Remaining before `complete`:
+### Update 2026-07-15 (live verification -> `implementation: complete`)
 
-- The literal in-browser §3.1 click-through (login -> create tenant ->
-  tenant detail through the rendered SPA) was not performed this
-  session: the browser-automation extension was not connected. The
-  underlying API flow is verified above; only the pixel-level walk is
-  outstanding.
-- §3.2 (launching a stamp shows live job progression) needs a real
-  GitHub App installation into a real org: a tenant with an active
-  installation whose org matches the target (spec 005 enforces this).
-  That is external state, not producible locally without installing the
-  Stagecraft GitHub App into a live org. The stamp launcher and
-  progress-polling UI are wired to spec 005's real endpoints and shapes;
-  they light up once a real installation exists.
+Both remaining items were exercised in-browser against a live local
+control plane (Chrome via the automation extension; `encore run` on :4000
+with the real GitHub App secrets sourced, the webapp dev server on :5173,
+CoreLedger on the dev Postgres, mock auth driver). Acceptance holds in
+full:
+
+- **§3.1 in-browser click-through** (real data): unauthenticated load
+  redirects to `/login`; mock sign-in lands on the tenants dashboard;
+  `New tenant` -> create -> tenant detail. The detail page then bound the
+  real org-wide `stagecraft-ing` installation (`125344051`, the spec 004
+  e2e installation) through the real `/github/setup` App-JWT path and
+  rendered the active installation plus the live repository list read
+  through the installation token.
+- **§3.2 launching a stamp shows live job progression** (real factory):
+  from the stamp launcher (`/tenants/:id/stamps/new`) a create-mode stamp
+  (`july-15-stampcheck`, org `stagecraft-ing`, posture `none`) launched
+  and the progress view (`/stamps/:jobId`) polled every 2s, advancing the
+  stepper live queued -> stamping -> pushing -> verifying -> (terminal).
+  The factory really cloned the pinned template, stamped, created the
+  private repo `stagecraft-ing/july-15-stampcheck`, minted a born-with
+  cert, triggered the repo's born-green CI, and the UI rendered the honest
+  terminal state. The stamp finished `failed` because the stamped repo's
+  born-green CI did not pass (`npm --prefix frontend-react ci` -> EUSAGE:
+  the pinned template ref lacks a `frontend-react` lockfile). That is a
+  factory/template concern (the pin, spec 005 / enrahitu), not a webapp
+  defect: §3.2 asks that the UI *show live job progression*, which it did
+  through to the terminal state, including the failure surface. Tracked
+  for the factory separately; it does not gate this webapp spec.
+
+Everything else (build, served bundle, vitest, spine + govern gates) was
+already green (above) and stays green.
