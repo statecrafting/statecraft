@@ -3,7 +3,7 @@ id: "004-tenants-github-app"
 title: "Tenants: OAuth login + per-org GitHub App installation"
 status: approved
 created: "2026-07-14"
-implementation: in-progress
+implementation: complete
 depends_on:
   - "002-app-shell"
   - "003-postgres-adoption"
@@ -101,6 +101,16 @@ CoreLedger entities, github-app token helper, webhook endpoint.
   create tenant, install-url -> GitHub -> setup callback persists the
   installation, `GET /tenants/:id/repos` returns the org's repos.
 - Spine gates + verify verb green.
+
+COMPLETE 2026-07-15 (PR #4): unit tests cover the state-token round-trip
+and webhook HMAC verify (reject bad sig); entity persistence round-trips
+on both libSQL and Postgres (the Postgres arm ran under
+`TEST_POSTGRES_URL` locally and in CI); spine gates + `verify` green. The
+manual e2e click path is documented (backend/tenants/README.md and the PR
+body); executing it live against GitHub is an operator step that needs the
+App secrets set and, for the webhook leg, the control plane's public URL
+(the App webhook still points at the legacy plane until fleet, spec 006,
+gives it one).
 
 ## 5. Out of scope
 
