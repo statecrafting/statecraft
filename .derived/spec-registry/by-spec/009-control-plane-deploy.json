@@ -3,7 +3,8 @@
     "created": "2026-07-16",
     "dependsOn": [
       "002-app-shell",
-      "008-governance-attestation"
+      "008-governance-attestation",
+      "010-stagecraft-cluster"
     ],
     "establishes": [
       {
@@ -28,13 +29,14 @@
       "3. Behavior",
       "4. Acceptance",
       "Status (2026-07-16)",
+      "Stage 2 re-scoped onto spec 010 (2026-07-16)",
       "5. Out of scope"
     ],
     "specPath": "specs/009-control-plane-deploy/spec.md",
     "status": "approved",
-    "summary": "Give stagecraft its own deployment story so the spec-governed control plane runs on the fleet cluster owned entirely by this repo, with no dependency on the archived open-agentic-platform (OAP) chart or CD. Publish the single-container image to stagecraft's own GHCR namespace, stand it up as a platform-grade K8s deployment reachable at app.stagecraft.ing, seed its own rauthy client, and cut over from the OAP-built stagecraft release. Port the OAP CI tooling worth keeping (AI PR review + changelog, the PR gate pattern), adapted to be OAP-free.\n",
+    "summary": "Give stagecraft its own deployment story so the spec-governed control plane runs on the stagecraft-owned cluster (spec 010) with no dependency on the open-agentic-platform (OAP) chart, CD, or secret set. Publish the single-container image to stagecraft's own GHCR namespace (stage 1, done), then stand the control plane up on the 010 cluster as a platform-grade K8s deployment reachable at app.stagecraft.ing, wired to the real Encore secret contract and seeded with its own rauthy client. Port the OAP CI tooling worth keeping (AI PR review + changelog, the PR gate pattern), adapted to be OAP-free.\n",
     "title": "Self-hosted control plane deployment (OAP-independent)"
   },
-  "shardHash": "7a507149fbdf018da40787e0e4ecac3c5443f65877f5d263648b185c5f929242",
+  "shardHash": "a04a8049024c992d31ee534501514178c893a28c56c14333f7b58d675395668d",
   "specVersion": "1.1.0"
 }

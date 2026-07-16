@@ -2,7 +2,8 @@
   "mapping": {
     "dependsOn": [
       "002-app-shell",
-      "008-governance-attestation"
+      "008-governance-attestation",
+      "010-stagecraft-cluster"
     ],
     "implementingPaths": [
       {
@@ -63,5 +64,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "b3dd2a88643cced61da56e975c393041b46e2dae02ac80cd4ed6bb4792e07a31"
+  "shardHash": "cd337f261adb91b177c968e9c03226d9f6badc3f04b111e5c36e5ed1a68538cf"
 }

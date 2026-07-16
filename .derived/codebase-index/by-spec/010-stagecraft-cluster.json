@@ -1,0 +1,33 @@
+{
+  "diagnostics": {
+    "errors": [],
+    "warnings": [
+      {
+        "code": "W-001",
+        "message": "spec '010-stagecraft-cluster' directory unit 'platform/' is not a directory",
+        "path": "platform/"
+      }
+    ]
+  },
+  "mapping": {
+    "dependsOn": [
+      "001-stagecraft-thesis"
+    ],
+    "implementingPaths": [],
+    "resolvedUnits": [
+      {
+        "locations": [],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "directory",
+          "path": "platform/"
+        }
+      }
+    ],
+    "specId": "010-stagecraft-cluster",
+    "specStatus": "approved"
+  },
+  "schemaVersion": "1.1.0",
+  "shardHash": "11c5df8b3d19f1251d8ad7d5d0458122f885043868f855253b3f5543024f9675"
+}
