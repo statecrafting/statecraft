@@ -206,20 +206,65 @@ Four issues surfaced; the first is fixed here, the rest are tracked:
    gate's `actor-authenticated` check denied every gated verb. `gateOrDeny`
    now attaches `actor` + `authenticated: true` from the request auth context;
    verified live (the deploy passed the gate after the fix).
-2. **Pull-secret provisioning (open).** The deploy sets no `imagePullSecret`
-   and the API exposes none, so a private image cannot be pulled without an
-   operator-provisioned namespace secret + SA patch. Fix pending.
-3. **`runAsNonRoot` without `runAsUser`/`fsGroup` (open).** The hardened
-   container securityContext forbids root but sets no `runAsUser`; enrahitu
-   images declare no `USER` (root). Setting `runAsUser`/`fsGroup` on the pod
-   let the container start. Fix pending in `addon/fleet-native`.
+2. **Pull-secret provisioning (fixed 2026-07-16).** The deploy set no
+   `imagePullSecret` and the API exposed none, so a private image could not be
+   pulled without an operator-provisioned namespace secret + SA patch. Fixed:
+   see the 2026-07-16 note.
+3. **`runAsNonRoot` without `runAsUser`/`fsGroup` (fixed 2026-07-16).** The
+   hardened container securityContext forbade root but set no `runAsUser`;
+   enrahitu images declare no `USER` (root). Setting `runAsUser`/`fsGroup` on
+   the pod let the container start. Fixed: see the 2026-07-16 note.
 4. **No deployable amd64 enrahitu image (open).** No published enrahitu image
    exists (enrahitu's image workflow never pushes); the GHCR stamped-app images
    are non-chassis Encore apps that crash without SQL config. Blocked on an
-   amd64 enrahitu image (enrahitu v0.2.0).
+   amd64 enrahitu image (still open after enrahitu v0.2.0; see the 2026-07-16
+   note for why v0.2.0 did not resolve it).
 
 Full deploy -> `/health` -> update -> backup -> remove + the scale check still
-need #2/#3 fixed and a real image; this spec stays `in-progress`.
+need a real image and the ingress/domain/backup-secret prerequisites; this spec
+stays `in-progress`. See the 2026-07-16 note.
+
+### 2026-07-16: code fixes #2/#3 landed; live E2E still blocked on external state
+
+The two code-level findings are fixed and all gates are green (`cargo test` 12,
+`build:addon`, typecheck, `build:app`, vitest 111, spine compile/index/lint/index
+check):
+
+- **#2 pull-secret** is now plumbed end to end. `FLEET_IMAGE_PULL_SECRET` (a
+  non-secret env: the name of a `dockerconfigjson` Secret the operator creates
+  in the app namespace) is read in `backend/fleet/config.ts` and set as
+  `imagePullSecret` on the `placeApp`/`updateApp` spec in `api.ts` (omitted when
+  empty). The addon already wired `image_pull_secret` onto the pod's
+  `imagePullSecrets`. Provisioning the Secret in the namespace stays an operator
+  step (§3 operator prerequisites).
+- **#3 runAsNonRoot start** is fixed in `addon/fleet-native/src/resources.rs`.
+  The container now runs as UID/GID 1000 (the `node:24-slim` `node` user) with a
+  pod-level `fsGroup: 1000` so the RWO PVC at `/data` is writable, the exact
+  direction the 2026-07-15 E2E verified. Golden `cargo test` asserts the
+  securityContext (12 tests).
+
+Nothing in stagecraft's own territory now blocks acceptance. What remains is
+external and outside spec 006 (§5):
+
+1. **A pullable amd64 enrahitu image (finding #4 stands).** enrahitu v0.2.0
+   published only the npm toolchain (`publish.yml`). Its `image.yml` builds and
+   smokes a native amd64 image but never pushes it (it runs on
+   `workflow_dispatch`/weekly, with no registry login or `docker push`), so no
+   deployable image exists. Publishing one is enrahitu's image pipeline (a later
+   spec), not stagecraft's.
+2. **An ingress entrypoint.** ingress-nginx on the cluster is ClusterIP, not
+   hostNetwork, so `*.deployd.xyz` has no external target; a hostNetwork ingress
+   DaemonSet plus the Cloudflare `*.deployd.xyz` record are needed before
+   `/health` is reachable through the Ingress.
+3. **Domain + backup secrets in the infra `.env`.** `FLEET_BASE_DOMAIN`,
+   `FLEET_S3_ACCESS_KEY_ID`, and `FLEET_S3_SECRET_ACCESS_KEY` (plus the
+   `.env.example` + `oap-bootstrap` reconciliation) are still unprovisioned.
+
+The live E2E (deploy -> `/health` -> update -> backup -> remove) and the ten-app
+scale check need all three. §4 acceptance is a live-cluster gate, not a code
+gate, so this spec stays `implementation: in-progress` until that E2E runs and
+holds. Flipping it on unverified acceptance is exactly what the coherence guard
+forbids.
 
 ## 5. Out of scope
 

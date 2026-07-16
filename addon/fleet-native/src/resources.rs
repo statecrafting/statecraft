@@ -11,9 +11,9 @@ use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec, DeploymentStrategy}
 use k8s_openapi::api::batch::v1::{Job, JobSpec};
 use k8s_openapi::api::core::v1::{
     Capabilities, Container, ContainerPort, EnvVar, HTTPGetAction, LocalObjectReference, Namespace,
-    PersistentVolumeClaim, PersistentVolumeClaimSpec, PersistentVolumeClaimVolumeSource, PodSpec,
-    PodTemplateSpec, Probe, SeccompProfile, SecurityContext, Service, ServicePort, ServiceSpec,
-    Volume, VolumeMount, VolumeResourceRequirements,
+    PersistentVolumeClaim, PersistentVolumeClaimSpec, PersistentVolumeClaimVolumeSource,
+    PodSecurityContext, PodSpec, PodTemplateSpec, Probe, SeccompProfile, SecurityContext, Service,
+    ServicePort, ServiceSpec, Volume, VolumeMount, VolumeResourceRequirements,
 };
 use k8s_openapi::api::networking::v1::{
     HTTPIngressPath, HTTPIngressRuleValue, Ingress, IngressBackend, IngressRule,
@@ -33,6 +33,13 @@ use crate::types::{BackupTarget, DeploySpec};
 pub const DATA_MOUNT: &str = "/data";
 /// The health surface the readiness/liveness probes and E2E check hit.
 pub const HEALTH_PATH: &str = "/health";
+/// The non-root UID/GID the app runs as. enrahitu images declare no `USER`, so
+/// they would run as root, but the hardened securityContext forbids root
+/// (`runAsNonRoot`); the `node:24-slim` base carries the `node` user at 1000. So
+/// the container runs as 1000 and a pod-level `fsGroup` makes the mounted PVC
+/// group-writable by that GID, which is what let the container start in the
+/// 2026-07-15 live E2E (spec 006 §3, finding #3).
+pub const NONROOT_UID: i64 = 1000;
 
 fn meta(app: &str, ns: &str) -> ObjectMeta {
     ObjectMeta {
@@ -118,6 +125,8 @@ fn http_probe(initial: i32, period: i32) -> Probe {
 fn container_security_context() -> SecurityContext {
     SecurityContext {
         run_as_non_root: Some(true),
+        run_as_user: Some(NONROOT_UID),
+        run_as_group: Some(NONROOT_UID),
         allow_privilege_escalation: Some(false),
         capabilities: Some(Capabilities {
             drop: Some(vec!["ALL".to_string()]),
@@ -166,6 +175,16 @@ pub fn deployment(spec: &DeploySpec) -> Deployment {
             .image_pull_secret
             .as_ref()
             .map(|s| vec![LocalObjectReference { name: s.clone() }]),
+        // fsGroup chowns the mounted PVC to the non-root GID so the app (running
+        // as NONROOT_UID, not root) can write /data; runAs* at the pod level
+        // makes the non-root identity unambiguous for every container.
+        security_context: Some(PodSecurityContext {
+            run_as_non_root: Some(true),
+            run_as_user: Some(NONROOT_UID),
+            run_as_group: Some(NONROOT_UID),
+            fs_group: Some(NONROOT_UID),
+            ..Default::default()
+        }),
         volumes: Some(vec![Volume {
             name: "data".to_string(),
             persistent_volume_claim: Some(PersistentVolumeClaimVolumeSource {
@@ -508,6 +527,26 @@ mod tests {
             v.pointer("/spec/template/spec/volumes/0/persistentVolumeClaim/claimName")
                 .unwrap(),
             "acme-data"
+        );
+    }
+
+    #[test]
+    fn deployment_runs_as_nonroot_uid_with_fsgroup() {
+        let v = json(&deployment(&spec()));
+        // enrahitu images run as root; runAsNonRoot forbids that, so the
+        // container must be pinned to the non-root node UID (1000) to start.
+        let csc = "/spec/template/spec/containers/0/securityContext";
+        assert_eq!(v.pointer(&format!("{csc}/runAsNonRoot")).unwrap(), true);
+        assert_eq!(v.pointer(&format!("{csc}/runAsUser")).unwrap(), 1000);
+        assert_eq!(v.pointer(&format!("{csc}/runAsGroup")).unwrap(), 1000);
+        // Pod-level fsGroup makes the mounted PVC writable by that non-root GID.
+        assert_eq!(
+            v.pointer("/spec/template/spec/securityContext/fsGroup").unwrap(),
+            1000
+        );
+        assert_eq!(
+            v.pointer("/spec/template/spec/securityContext/runAsUser").unwrap(),
+            1000
         );
     }
 

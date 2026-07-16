@@ -41,6 +41,19 @@ export function fleetBaseDomain(): string {
   return (process.env.FLEET_BASE_DOMAIN ?? "").trim().replace(/\.+$/, "");
 }
 
+/**
+ * Name of a pre-provisioned `kubernetes.io/dockerconfigjson` Secret in the app
+ * namespace, wired onto the pod as `imagePullSecrets` so a private image (e.g. a
+ * private GHCR enrahitu image) can be pulled (spec 006 §3, finding #2). This is
+ * a resource name, not a credential, so it is a plain env var (non-secret);
+ * empty means public images only and no pull secret is attached. Provisioning
+ * the Secret in the namespace is an operator step (spec 006 §3 operator
+ * prerequisites).
+ */
+export function fleetImagePullSecret(): string {
+  return (process.env.FLEET_IMAGE_PULL_SECRET ?? "").trim();
+}
+
 function fromSecretOrEnv(value: string, envName: string): string {
   const v = value.trim();
   if (v.length > 0) return v;

@@ -12,7 +12,7 @@ import { governance } from "~encore/clients";
 import { logError, logInfo } from "../lib/logger";
 import { getOwnedTenant } from "../tenants/store";
 
-import { backupTarget, fleetBaseDomain } from "./config";
+import { backupTarget, fleetBaseDomain, fleetImagePullSecret } from "./config";
 import type { FleetApp, FleetAppStatus } from "./entities";
 import { gateOrDeny } from "./gate";
 import * as native from "./native";
@@ -113,6 +113,7 @@ export const deploy = api(
     const namespace = namespaceFor(id);
     const host = `${appName}.${domain}`;
     const size = volumeSize && volumeSize > 0 ? volumeSize : 1;
+    const pullSecret = fleetImagePullSecret();
 
     const gated = await gateOrDeny("deploy", { tenantId: id, app: appName, image: img }, "soft");
     const app = await createApp({
@@ -133,6 +134,7 @@ export const deploy = api(
         image: img,
         host,
         volumeSizeGi: size,
+        ...(pullSecret ? { imagePullSecret: pullSecret } : {}),
       });
       const ok = status.status === "running";
       await setAppStatus(app.id, ok ? "running" : "failed", {
@@ -201,12 +203,14 @@ export const update = api(
     await setAppStatus(app.id, "updating");
 
     try {
+      const pullSecret = fleetImagePullSecret();
       const live = await native.updateApp({
         name: app.name,
         namespace: app.namespace,
         image: img,
         host: app.host,
         volumeSizeGi: app.volumeSize,
+        ...(pullSecret ? { imagePullSecret: pullSecret } : {}),
       });
       const ok = live.status === "running";
       await setAppStatus(app.id, ok ? "running" : "failed", { image: img, host: live.host || app.host });
