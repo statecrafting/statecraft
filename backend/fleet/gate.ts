@@ -13,6 +13,7 @@
  * allow. On allow the caller attaches the returned configHash to its attestation.
  */
 import { APIError } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
 import { governance } from "~encore/clients";
 
 import { logError, logWarn } from "../lib/logger";
@@ -31,9 +32,16 @@ export async function gateOrDeny(
   attributes: Record<string, unknown>,
   cls: GateClass,
 ): Promise<GateOk> {
+  // The gate's actor-authenticated check requires the authenticated actor in the
+  // ActionContext. Every gated fleet verb runs under auth: true, so attach the
+  // caller identity here (auth context is authoritative; callers cannot spoof it).
+  const auth = getAuthData();
+  const gateAttributes = auth
+    ? { ...attributes, actor: `user:${auth.userID}`, authenticated: true }
+    : attributes;
   let decision: GateDecision | null = null;
   try {
-    decision = await governance.gate({ action, attributes });
+    decision = await governance.gate({ action, attributes: gateAttributes });
   } catch (err) {
     logError("fleet.gate_unreachable", { action, cls, err: String(err) });
     decision = null;

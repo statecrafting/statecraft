@@ -192,6 +192,35 @@ Deferred (external state), keeping this spec in-progress:
 
 Flip to `implementation: complete` once the live E2E holds.
 
+### Live E2E attempt 2026-07-15 (first real deploy on hetzner-k3s)
+
+Driven from the local control plane against the live cluster. **Placement is
+proven**: `placeApp` created the full shape live: the Namespace, the Deployment
+(Recreate, 1 replica), the PVC Bound to a real hcloud block volume (RWO), the
+ClusterIP Service on the container's http port, and the nginx Ingress at
+`<app>.deployd.xyz` carrying the cert-manager DNS-01 ClusterIssuer annotation.
+Four issues surfaced; the first is fixed here, the rest are tracked:
+
+1. **Gate-actor bug (fixed in this change).** Fleet is the first
+   `POST /governance/gate` consumer and its calls omitted the actor, so the
+   gate's `actor-authenticated` check denied every gated verb. `gateOrDeny`
+   now attaches `actor` + `authenticated: true` from the request auth context;
+   verified live (the deploy passed the gate after the fix).
+2. **Pull-secret provisioning (open).** The deploy sets no `imagePullSecret`
+   and the API exposes none, so a private image cannot be pulled without an
+   operator-provisioned namespace secret + SA patch. Fix pending.
+3. **`runAsNonRoot` without `runAsUser`/`fsGroup` (open).** The hardened
+   container securityContext forbids root but sets no `runAsUser`; enrahitu
+   images declare no `USER` (root). Setting `runAsUser`/`fsGroup` on the pod
+   let the container start. Fix pending in `addon/fleet-native`.
+4. **No deployable amd64 enrahitu image (open).** No published enrahitu image
+   exists (enrahitu's image workflow never pushes); the GHCR stamped-app images
+   are non-chassis Encore apps that crash without SQL config. Blocked on an
+   amd64 enrahitu image (enrahitu v0.2.0).
+
+Full deploy -> `/health` -> update -> backup -> remove + the scale check still
+need #2/#3 fixed and a real image; this spec stays `in-progress`.
+
 ## 5. Out of scope
 
 - Autoscaling, multi-replica, multi-cluster, non-K8s targets.
