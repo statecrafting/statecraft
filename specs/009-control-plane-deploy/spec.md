@@ -6,16 +6,18 @@ created: "2026-07-16"
 implementation: in-progress
 summary: >
   Give stagecraft its own deployment story so the spec-governed control plane
-  runs on the fleet cluster owned entirely by this repo, with no dependency on
-  the archived open-agentic-platform (OAP) chart or CD. Publish the
-  single-container image to stagecraft's own GHCR namespace, stand it up as a
-  platform-grade K8s deployment reachable at app.stagecraft.ing, seed its own
-  rauthy client, and cut over from the OAP-built stagecraft release. Port the
-  OAP CI tooling worth keeping (AI PR review + changelog, the PR gate pattern),
-  adapted to be OAP-free.
+  runs on the stagecraft-owned cluster (spec 010) with no dependency on the
+  open-agentic-platform (OAP) chart, CD, or secret set. Publish the
+  single-container image to stagecraft's own GHCR namespace (stage 1, done),
+  then stand the control plane up on the 010 cluster as a platform-grade K8s
+  deployment reachable at app.stagecraft.ing, wired to the real Encore secret
+  contract and seeded with its own rauthy client. Port the OAP CI tooling
+  worth keeping (AI PR review + changelog, the PR gate pattern), adapted to be
+  OAP-free.
 depends_on:
   - "002-app-shell"
   - "008-governance-attestation"
+  - "010-stagecraft-cluster"
 establishes:
   - { kind: directory, path: "deploy/" }
   - ".github/workflows/image.yml"
@@ -31,16 +33,38 @@ establishes:
 
 Stagecraft is "the first production EnRaHiTu app" and "allowed to be a
 platform-grade K8s deployment" (spec 001 §3), but it has no deployment of its
-own. What runs on the cluster today at the apex is the **archived OAP build**
+own. What runs on the old cluster is the OAP build
 (`ghcr.io/stagecraft-ing/open-agentic-platform/stagecraft`), deployed by OAP's
-Helm chart and `cd-stagecraft.yml`. OAP is retired: everything needed to build,
-publish, deploy, and operate the control plane must live in this repo. This spec
-makes stagecraft self-hosting and severs the OAP dependency.
+Helm chart and `cd-stagecraft.yml`. Everything needed to build, publish, deploy,
+and operate the control plane must live in this repo. This spec makes stagecraft
+self-hosting and severs the OAP dependency.
 
-The trigger is concrete: the control plane has no reachable URL (its OAP ingress
-targets the apex `stagecraft.ing`, which is the GitHub Pages marketing site).
-The chosen public host is **app.stagecraft.ing** (DNS A record to the worker
-ingress already provisioned under this effort).
+Two corrections to the original framing, verified 2026-07-16:
+
+- **The OAP repo is not archived.** `stagecraft-ing/open-agentic-platform` is
+  public and was last pushed 2026-07-15. The dependency on it is an ownership
+  defect, not decay.
+- **The OAP build is a different application, not an older stagecraft.** Its pod
+  environment carries no database URL at all (`SECRETS_DIR`, `OIDC_ENDPOINT`,
+  `DEPLOYD_*`, `OIDC_M2M_CLIENT_*_FILE`), and the `stagecraft` database it backs
+  holds the research-era schema. There is no upgrade path from it to this repo's
+  control plane, and none is wanted: it is discarded, not migrated.
+
+The trigger is concrete: the control plane has no reachable URL. Verified
+2026-07-16, **no `app.stagecraft.ing` ingress exists at all**: the only ingresses
+are `minio.stagecraft.ing` and `stagecraft.ing` (the apex, which DNS routes to
+the GitHub Pages marketing site), so nginx answers the unmatched host with its
+default backend and the `Kubernetes Ingress Controller Fake Certificate`. The
+OAP control plane has therefore been unreachable, and `app.stagecraft.ing`
+currently gives a TLS warning followed by a 404. The chosen public host is
+**app.stagecraft.ing**.
+
+**Scope after the 010 re-scope (2026-07-16).** This spec no longer stands the
+control plane up on the OAP cluster, nor retires the OAP release: spec 010
+builds a stagecraft-owned cluster alongside and deletes the old one, taking the
+OAP release and its database with it. Stage 1 (the image) is cluster-independent
+and already done. What remains here is the deploy itself, targeting 010's
+cluster, plus the ported CI.
 
 ## 2. Territory
 
@@ -67,28 +91,54 @@ ingress already provisioned under this effort).
   Private is acceptable; the deploy provides pull creds (a namespace
   `dockerconfigjson` secret), matching the fleet finding that the cluster's
   reflector-synced `ghcr-pull` carries bot creds without access to new packages.
-- **Deploy topology.** The control plane runs the Postgres driver (spec 003) on
-  the cluster (not the fleet's per-app libSQL shape): a single-replica
-  Deployment + a managed Postgres (StatefulSet or the existing cluster
-  Postgres), a PVC for the workspace, a ClusterIP Service on `:4000`, an Ingress
-  `app.<domain>` (ingressClassName `nginx`, TLS via
-  `letsencrypt-prod-dns01-cloudflare`, whose deployd.xyz + tenants solvers this
-  effort already extended).
-- **Auth.** Reuse the platform rauthy at `auth.<domain>` as the IdP. The deploy
-  seeds/updates the stagecraft rauthy OIDC client so its `redirect_uris`
-  allow-list includes `https://app.<domain>/...` (additive convergence, the
-  pattern OAP's seed-rauthy used), owned by a stagecraft-side seed step. The
-  app's public origin (`APP_BASE_URL`) is `https://app.<domain>`.
-- **Secrets.** A stagecraft-owned secret set (DB URL, OIDC M2M client id/secret,
-  PAT encryption key, `APP_BASE_URL`) sourced without OAP: from the operator
-  infra `.env` at deploy time and/or a stagecraft-managed cluster Secret. No
-  External Secrets dependency on an OAP backend.
-- **Cutover.** Bring up the new deployment (its own Helm release name, distinct
-  from the OAP `stagecraft` release), verify `app.<domain>` serves and login
-  works, then repoint / retire the OAP release and its apex ingress. The apex
+- **Deploy topology.** On the spec 010 cluster. The control plane runs the
+  Postgres driver (spec 003), not the fleet's per-app libSQL shape: a
+  single-replica Deployment against 010's Postgres in **its own database, born
+  empty**, a PVC for the workspace, a ClusterIP Service on `:4000`, and an
+  Ingress `app.<domain>` (ingressClassName `nginx`, TLS via
+  `letsencrypt-prod-dns01-cloudflare`). This is the ingress that does not exist
+  today (§1) and creating it is what makes the host real.
+- **Auth.** Reuse the platform rauthy at `auth.<domain>` (installed and seeded
+  by spec 010) as the IdP. This deploy converges the stagecraft OIDC client's
+  `redirect_uris` allow-list to include `https://app.<domain>/...`, additively:
+  it never removes an existing URI. The app's public origin is
+  `WEBAPP_BASE_URL=https://app.<domain>`.
+- **Secrets: the real contract** (corrected 2026-07-16; the original list was
+  OAP's, not this app's). The app declares **11 Encore secrets**, each mapped
+  `$env` to an identically-named environment variable by `infra.config.json`
+  (spec 002 territory), so the deploy's job is simply to put these 11 on the
+  pod: `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY`, `JWT_REFRESH_PRIVATE_KEY`,
+  `JWT_REFRESH_PUBLIC_KEY`, `RAUTHY_CLIENT_SECRET`, `GITHUB_APP_ID`,
+  `GITHUB_APP_PRIVATE_KEY_B64`, `GITHUB_WEBHOOK_SECRET`, `RESTIC_PASSWORD`,
+  `FLEET_S3_ACCESS_KEY_ID`, `FLEET_S3_SECRET_ACCESS_KEY`. Alongside them, the
+  non-secret env the services read directly: `ENRAHITU_LEDGER_URL` (the
+  Postgres URL; the driver is chosen by scheme, spec 003), `WEBAPP_BASE_URL`,
+  `RAUTHY_UPSTREAM`, `ENRAHITU_KEYS_DIR`, `FLEET_BASE_DOMAIN`,
+  `FLEET_IMAGE_PULL_SECRET`, the `FLEET_BACKUP_*` trio, `FACTORY_TEMPLATE_REPO`
+  / `FACTORY_TEMPLATE_REF` / `FACTORY_DATA_DIR`, and
+  `STAGECRAFT_GOVERNANCE_CONFIG_DIR` / `STAGECRAFT_GOVERNANCE_STATE_DIR`. All of
+  it flows from spec 010's secret catalog. There is no `APP_BASE_URL`, no
+  `PAT_ENCRYPTION_KEY`, and no `OIDC_M2M_CLIENT_ID`/`OIDC_M2M_CLIENT_SECRET` in
+  this codebase; those are OAP's names and appear nowhere outside the earlier
+  draft of this spec.
+- **The JWT signing keys are an operator prerequisite.** The four `JWT_*`
+  secrets exist in no `.env` and no cluster secret: they are minted by
+  `npm run generate-keys` into a gitignored `keys/` that is deliberately absent
+  from images. Without them, login returns 500 and the acceptance below cannot
+  hold. They must be generated once, added to spec 010's catalog, and delivered
+  via SOPS like every other cluster secret. Custody is the operator's call and
+  is recorded when 010 lands.
+- **`infra.config.json` needs a production origin.** Its `metadata.base_url` is
+  `http://localhost:8080` and `env_name` is `selfhost`. The deployed
+  configuration must carry the real origin. That file is spec 002 territory, so
+  the change lands with a coordinated 002 edit or a cited waiver.
+- **Cutover.** Spec 010 owns cluster-level cutover and the teardown that
+  discards the OAP release and its database. This spec's cutover is narrower:
+  bring the control plane up on the 010 cluster under its own release name,
+  verify `app.<domain>` serves the governance UI over a valid cert and a real
+  rauthy login completes, and only then let 010 cut the DNS. The apex
   `stagecraft.ing` stays the marketing site; the control plane lives at
-  `app.stagecraft.ing`. Document a rollback (the OAP release is left installed
-  but scaled/ingress-disabled until the new one is proven).
+  `app.stagecraft.ing`. Rollback is 010's: the old cluster stays until proven.
 - **Ported CI (OAP-free).** `ai-pr-review.yml` runs the Claude CLI over the PR
   diff and posts a review (no `ANTHROPIC_API_KEY` committed; auth via the
   workflow's configured credential). `ai-changelog.yml` its companion. The PR
@@ -99,13 +149,17 @@ ingress already provisioned under this effort).
 ## 4. Acceptance
 
 - `image.yml` publishes a pullable `ghcr.io/stagecraft-ing/stagecraft` image;
-  verified by pulling it.
-- The stagecraft-owned deploy stands up the control plane on the cluster with no
-  OAP chart/CD/secret dependency; `https://app.stagecraft.ing` serves the
-  governance UI over a valid cert and a real login completes against rauthy.
-- The OAP `stagecraft` release is retired (or demoted to standby) without
-  breaking the platform (auth, deployd, fleet, marketing site unaffected).
+  verified by pulling it. **(Met 2026-07-16, stage 1.)**
+- The stagecraft-owned deploy stands up the control plane on the spec 010
+  cluster with no OAP chart, CD, or secret dependency, wired to the 11 Encore
+  secrets and the non-secret env named in §3, against its own empty database.
+- `https://app.stagecraft.ing` serves the governance UI over a valid
+  cert (not the ingress default) and a real rauthy login completes end to end.
 - `ai-pr-review.yml` runs on a PR and posts a review; spine gates + verify green.
+
+Retiring the OAP release is **no longer this spec's acceptance**: the old
+cluster is deleted wholesale by spec 010, which takes the release and its
+database with it.
 
 ## Status (2026-07-16)
 
@@ -133,8 +187,43 @@ root workspace), and the prebuilt `@enrahitu/toolchain-linux-x64` binaries requi
 2.39 toolchain binaries but a 2.36 base image, an upstream mismatch worth an
 enrahitu follow-up).
 
+### Stage 2 re-scoped onto spec 010 (2026-07-16)
+
+Stage 2 (the deploy) was opened against the OAP cluster and stopped before any
+manifest was written, on four findings from the live cluster:
+
+1. **This spec's secret list was OAP's, not this app's.** `APP_BASE_URL`,
+   `PAT_ENCRYPTION_KEY`, and `OIDC_M2M_CLIENT_ID`/`SECRET` appear nowhere in
+   this codebase outside this spec and `deploy/README.md`. They are real keys in
+   the operator `.env` and are what the *running OAP pod* consumes
+   (`OIDC_M2M_CLIENT_ID_FILE`), so the draft was written from the operator
+   secret store and the OAP deployment rather than from this repo's code. The
+   app reads `WEBAPP_BASE_URL` (`backend/tenants/config.ts:34`) and takes its
+   secrets through Encore `secret()` + `infra.config.json`. §3 is corrected;
+   `deploy/README.md` likewise.
+2. **The JWT signing keys do not exist** in the operator `.env` or on the
+   cluster (§3). Login cannot work until they are minted.
+3. **The `stagecraft` database holds live OAP data** (`factory_artifact_substrate`
+   277 rows, `audit_log` 143, `users` 3, its own `schema_migrations`) under a
+   schema unrelated to CoreLedger's, so it could never have been reused. It is
+   discarded with the old cluster.
+4. **Flux would not have fought a cutover**, which was the standing risk: its
+   `manifests` kustomization owns 3 objects (2 cluster-scoped, 1 in
+   cert-manager) and nothing in `stagecraft-system`. The OAP release is plain
+   Helm from the archived CD (`meta.helm.sh/release-name: stagecraft`, deploy
+   revision 206, release v256).
+
+Rather than deploy onto a cluster named for another product and then migrate,
+spec 010 builds the stagecraft cluster alongside and this spec targets it.
+Stage 1 is unaffected: the image is cluster-independent and already published.
+Stage 2 resumes once 010 lands.
+
 ## 5. Out of scope
 
+- **The cluster and the platform services on it** (the cluster itself, Flux,
+  SOPS, rauthy, Postgres, NSQ, minio, prometheus/grafana, DNS cutover, and the
+  old cluster's teardown): all spec 010. This spec deploys one application onto
+  a cluster it assumes exists.
 - Non-hetzner deployment targets (values for other clouds); hetzner first.
 - Porting OAP's research-era services or their service-specific CI
   (axiomregent, opc, deployd-api, desktop, tenant-app, etc.).

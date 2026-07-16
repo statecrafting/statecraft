@@ -32,12 +32,23 @@ Run these as the first actions of a new session:
 
 This repo's backlog is its spec corpus: every spec with
 `implementation: pending` is a work order. One session implements one
-spec, start to finish. Build order: 002 app shell, 003 Postgres, 004
-tenants, 005 factory, 006 fleet, 007 webapp; 008 governance is
-parallel-safe any time after 002. Exception (2026-07-14): 002 is
-gated on enrahitu 018+019 (slimmed template); while that gate holds,
-008's addon + service can start first (it does not need the chassis;
-rebase its service wiring onto the shell when 002 lands).
+spec, start to finish.
+
+**Current build order (2026-07-16).** Specs 002 through 008 are complete;
+their historical order (002 shell, 003 Postgres, 004 tenants, 005 factory,
+006 fleet, 007 webapp, 008 governance) is now only of archaeological
+interest. What remains:
+
+1. **010 stagecraft cluster** is next: the stagecraft-owned hetzner-k3s
+   cluster, Flux GitOps, SOPS secrets, and the platform services. Built
+   alongside the existing OAP-named cluster, DNS cut when proven, old
+   cluster deleted after.
+2. **009 control plane deploy** resumes once 010 lands. Stage 1 (the
+   image) is done and cluster-independent; stage 2 (the deploy) is
+   re-scoped onto 010's cluster and is blocked until it exists.
+
+Note that 001 (the thesis) carries `implementation: pending` but is a
+record, not a work order; do not pick it up as one.
 
 1. Pick the next spec: the lowest-numbered spec whose frontmatter says
    `implementation: pending` and whose `depends_on` specs are all
