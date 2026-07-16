@@ -7,7 +7,7 @@
     "establishes": [
       {
         "kind": "directory",
-        "path": "platform/"
+        "path": "infra/"
       }
     ],
     "id": "010-stagecraft-cluster",
@@ -32,6 +32,6 @@
     "summary": "Stagecraft does not own the cluster it runs on: the nodes are named for OAP, and Flux reconciles this cluster from the open-agentic-platform repository. Build a stagecraft-owned hetzner-k3s cluster alongside the existing one, reconciled by Flux from a stagecraft-owned GitOps tree, with one documented secret source that generates both the local-dev `.env` and the SOPS-encrypted cluster secrets Flux decrypts in-cluster. Stand up the platform services (cert-manager, ingress-nginx, rauthy, Postgres, NSQ, minio, prometheus/grafana), cut DNS when proven, then delete the old cluster. Blue-green at the cluster level: rollback is a DNS change.\n",
     "title": "The stagecraft cluster: Flux GitOps, SOPS secrets, platform services"
   },
-  "shardHash": "d4e652cfde910ee996f00d20d178a760018adcf73679b2b92fcce18078c0c66d",
+  "shardHash": "8a4eabc88df4306f7e81b08b6038a16eb85edc5cf70654ae2a0fc31b92fc031b",
   "specVersion": "1.1.0"
 }

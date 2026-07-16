@@ -24,7 +24,6 @@ establishes:
   - { kind: directory, path: "backend/idp/" }
   - { kind: directory, path: "backend/lib/" }
   - { kind: directory, path: "backend/web/" }
-  - { kind: directory, path: "frontend/" }
   - { kind: directory, path: "scripts/" }
   - { kind: directory, path: "docker/" }
   - { kind: directory, path: ".stagecraft/" }
@@ -184,6 +183,22 @@ enrahitu 018 §4 delegated to the first stamped consumer.
   -> 200 `{"ok":true,"seq":0}`.
 - §4 spine gates (item 4): `spec-spine lint --fail-on-warn` reports
   0 errors / 0 warnings and `spec-spine index check` is fresh.
+
+### Update 2026-07-16 (the `frontend/` edge was a phantom; dropped)
+
+This spec `establishes`-ed `frontend/`, the chassis's placeholder SPA directory.
+It never held authored code here: verified 2026-07-16, `frontend/` has **zero
+git-tracked files**, and what sits on disk is 860 gitignored `node_modules`
+files left by the chassis import. Spec 007 replaced the placeholder with a real
+SPA but landed it at `webapp/`, so the corpus ended up owning an empty
+`frontend/` while the actual UI lived under a name the chassis does not use.
+
+The edge is dropped here and `frontend/` becomes spec 007's territory when its
+2026-07-16 realignment moves `webapp/` -> `frontend/`. This is a bookkeeping
+correction, not a behavior change: no tracked file moves under this spec, and
+002's acceptance is untouched. The chassis import shape (§2) is unaffected; the
+two-directory `backend/` + `frontend/` convention it describes is in fact what
+007's move restores.
 
 ## 5. Out of scope
 

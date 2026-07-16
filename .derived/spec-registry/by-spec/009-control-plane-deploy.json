@@ -8,10 +8,6 @@
     ],
     "establishes": [
       {
-        "kind": "directory",
-        "path": "deploy/"
-      },
-      {
         "kind": "file",
         "path": ".github/workflows/image.yml"
       },
@@ -37,6 +33,6 @@
     "summary": "Give stagecraft its own deployment story so the spec-governed control plane runs on the stagecraft-owned cluster (spec 010) with no dependency on the open-agentic-platform (OAP) chart, CD, or secret set. Publish the single-container image to stagecraft's own GHCR namespace (stage 1, done), then stand the control plane up on the 010 cluster as a platform-grade K8s deployment reachable at app.stagecraft.ing, wired to the real Encore secret contract and seeded with its own rauthy client. Port the OAP CI tooling worth keeping (AI PR review + changelog, the PR gate pattern), adapted to be OAP-free.\n",
     "title": "Self-hosted control plane deployment (OAP-independent)"
   },
-  "shardHash": "a04a8049024c992d31ee534501514178c893a28c56c14333f7b58d675395668d",
+  "shardHash": "6f3cc928262eb0818c24dc88edbd8402ccf3a025ee7388943b6ae53856578fd9",
   "specVersion": "1.1.0"
 }

@@ -34,16 +34,21 @@ This repo's backlog is its spec corpus: every spec with
 `implementation: pending` is a work order. One session implements one
 spec, start to finish.
 
-**Current build order (2026-07-16).** Specs 002 through 008 are complete;
-their historical order (002 shell, 003 Postgres, 004 tenants, 005 factory,
-006 fleet, 007 webapp, 008 governance) is now only of archaeological
-interest. What remains:
+**Current build order (2026-07-16).** Specs 002 through 008 landed; their
+historical order (002 shell, 003 Postgres, 004 tenants, 005 factory, 006
+fleet, 007 webapp, 008 governance) is now only of archaeological interest.
+What remains:
 
-1. **010 stagecraft cluster** is next: the stagecraft-owned hetzner-k3s
-   cluster, Flux GitOps, SOPS secrets, and the platform services. Built
-   alongside the existing OAP-named cluster, DNS cut when proven, old
-   cluster deleted after.
-2. **009 control plane deploy** resumes once 010 lands. Stage 1 (the
+1. **007 chassis realignment** (small, parallel-safe, do it whenever): move
+   the SPA `webapp/` -> `frontend/` to match the enrahitu chassis
+   convention, and retire spec 002's phantom `frontend/` edge. Mechanical
+   but wide; see 007's 2026-07-16 status note for the blast radius. It is
+   independent of the cluster work, so it can land first as a quick win.
+2. **010 stagecraft cluster** is the main line: the stagecraft-owned
+   hetzner-k3s cluster, Flux GitOps from the in-repo `infra/` tree, SOPS
+   secrets, and the platform services. Built alongside the existing
+   OAP-named cluster, DNS cut when proven, old cluster deleted after.
+3. **009 control plane deploy** resumes once 010 lands. Stage 1 (the
    image) is done and cluster-independent; stage 2 (the deploy) is
    re-scoped onto 010's cluster and is blocked until it exists.
 

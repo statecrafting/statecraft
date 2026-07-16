@@ -19,12 +19,14 @@ depends_on:
   - "008-governance-attestation"
   - "010-stagecraft-cluster"
 establishes:
-  - { kind: directory, path: "deploy/" }
   - ".github/workflows/image.yml"
   - ".dockerignore"
 # Further ownership edges land with their units during implementation (owned
-# paths and this spec move together): .github/workflows/{cd,ai-pr-review,
-# ai-changelog}.yml (see §2 Territory).
+# paths and this spec move together): the `deploy/` directory arrives with its
+# manifests in stage 2, and .github/workflows/{cd,ai-pr-review,ai-changelog}.yml
+# with theirs (see §2 Territory). `deploy/` is deliberately not declared while
+# it does not exist: this spec is `in-progress`, so spec-spine enforces that a
+# declared directory unit is a real directory (I-007).
 ---
 
 # 009: Self-hosted control plane deployment
@@ -74,9 +76,16 @@ cluster, plus the ported CI.
   multi-arch amd64 (the fleet cluster is x86-64), the same push+manifest shape
   proved for the enrahitu image.
 - `deploy/`: a stagecraft-owned Helm chart (or plain manifests + a
-  `values-hetzner.yaml`) standing up the Deployment, the Postgres it needs
+  `values-hetzner.yaml`) standing up the Deployment, the database it needs
   (CoreLedger driver, spec 003), a Service, an Ingress at
   `app.<domain>` with the cert-manager DNS-01 issuer, and the secret wiring.
+  **Manifests only: this spec is the documentation.** `deploy/README.md` was
+  removed 2026-07-16 because it restated the topology, the secret contract, and
+  the cutover, and then drifted from all three (it carried the same OAP-era
+  secret names corrected below). A README that paraphrases its own spec is a
+  second source of truth that no gate checks, since `**/README.md` is a coupling
+  bypass prefix. The directory holds deployable artifacts; the contract lives
+  here.
 - `.github/workflows/cd.yml`: on push to `main` (sha-pinned image) and on
   `workflow_dispatch`, build+push then `helm upgrade`/apply against the cluster;
   never floats `latest` onto the running release.

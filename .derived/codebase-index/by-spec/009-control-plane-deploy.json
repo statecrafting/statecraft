@@ -13,26 +13,9 @@
       {
         "path": ".github/workflows/image.yml",
         "source": "spec-edge"
-      },
-      {
-        "path": "deploy/",
-        "source": "spec-edge"
       }
     ],
     "resolvedUnits": [
-      {
-        "locations": [
-          {
-            "file": "deploy/"
-          }
-        ],
-        "ownership": true,
-        "sourceField": "establishes",
-        "unit": {
-          "kind": "directory",
-          "path": "deploy/"
-        }
-      },
       {
         "locations": [
           {
@@ -64,5 +47,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "cd337f261adb91b177c968e9c03226d9f6badc3f04b111e5c36e5ed1a68538cf"
+  "shardHash": "4aa9abdfe7793f0199b02d458408b6002ad46e5166ec908d18a58af863604c6f"
 }

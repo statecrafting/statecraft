@@ -7,7 +7,7 @@ implementation: pending
 depends_on:
   - "001-stagecraft-thesis"
 establishes:
-  - { kind: directory, path: "platform/" }
+  - { kind: directory, path: "infra/" }
 summary: >
   Stagecraft does not own the cluster it runs on: the nodes are named for
   OAP, and Flux reconciles this cluster from the open-agentic-platform
@@ -55,13 +55,13 @@ starting clean is not.
 
 ## 2. Territory
 
-- `platform/`: everything infrastructure, owned by this spec.
-  - `platform/hetzner/`: cluster provisioning (hetzner-k3s config, node
+- `infra/`: everything infrastructure, owned by this spec.
+  - `infra/hetzner/`: cluster provisioning (hetzner-k3s config, node
     pools, the operator bootstrap).
-  - `platform/gitops/clusters/stagecraft-hetzner/`: the Flux entrypoint and
+  - `infra/gitops/clusters/stagecraft-hetzner/`: the Flux entrypoint and
     the kustomizations it reconciles.
-  - `platform/secrets/catalog.toml`: the single documented secret source.
-  - `platform/secrets/*.sops.yaml`: SOPS-encrypted cluster secrets.
+  - `infra/secrets/catalog.toml`: the single documented secret source.
+  - `infra/secrets/*.sops.yaml`: SOPS-encrypted cluster secrets.
 
 **In-repo GitOps, not a second repository** (decided 2026-07-16). The Flux
 tree lives in this repo so it is governed by the same spine as everything
@@ -92,13 +92,13 @@ operator `.env` is its sibling. Both paths exist and are empty as of
 ### GitOps
 
 Flux bootstrapped against this repository at
-`platform/gitops/clusters/stagecraft-hetzner`. Acceptance includes a
+`infra/gitops/clusters/stagecraft-hetzner`. Acceptance includes a
 zero-hit grep: no manifest, HelmRelease, or GitRepository on the new cluster
 may reference `open-agentic-platform`.
 
 ### Secrets: one documented source, two outputs
 
-`platform/secrets/catalog.toml` is the single source. It holds names,
+`infra/secrets/catalog.toml` is the single source. It holds names,
 descriptions, ownership, required/optional status, and the consumer of each
 value. **It holds no values.** From it:
 
@@ -107,7 +107,7 @@ value. **It holds no values.** From it:
 - **The local-dev `.env`** (gitignored, at
   `~/.config/stagecraft-ing/infra/hetzner/.env`) is validated against the
   catalog: missing required keys and unknown keys both fail.
-- **Cluster secrets** are SOPS-encrypted YAML under `platform/secrets/`,
+- **Cluster secrets** are SOPS-encrypted YAML under `infra/secrets/`,
   committed, and decrypted in-cluster by Flux. The `age` private key is
   bootstrapped once into `flux-system` and never committed; the public key
   is committed so any operator can encrypt.
@@ -116,9 +116,21 @@ This is the reason SOPS beats a hand-carried `.env`: the values live
 encrypted in git, documentation sits beside them, no plaintext rests on
 disk, and every rotation is an auditable commit.
 
+**The JWT signing keys are minted into the operator `.env`** (decided
+2026-07-16). The four `JWT_*` keys (`JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY`,
+`JWT_REFRESH_PRIVATE_KEY`, `JWT_REFRESH_PUBLIC_KEY`) exist in no `.env` and on
+no cluster today; they are RS256 PEMs produced by `npm run generate-keys`, which
+writes them into a gitignored `keys/` that is deliberately absent from images.
+Spec 009 cannot satisfy "a real login completes" without them. They are
+generated once, written into
+`~/.config/stagecraft-ing/infra/hetzner/.env` alongside every other operator
+secret, declared in the catalog, and delivered to the cluster through SOPS like
+the rest. The operator `.env` is therefore the origin of record for key material,
+and the catalog is what makes that origin explicit rather than folkloric.
+
 ### Platform services
 
-Reconciled as Flux HelmReleases from `platform/gitops/`:
+Reconciled as Flux HelmReleases from `infra/gitops/`:
 
 - **cert-manager**, with both ClusterIssuers (`letsencrypt-prod` and
   `letsencrypt-prod-dns01-cloudflare`); the DNS-01 solver uses
@@ -173,7 +185,7 @@ OAP `stagecraft` database dies with it, intentionally and without export
   kubeconfig is the one at `~/.config/stagecraft-ing/infra/hetzner/`.
 - Flux reconciles it from this repository; no object on the cluster
   references `open-agentic-platform`.
-- `platform/secrets/catalog.toml` generates `.env.example`, validates a real
+- `infra/secrets/catalog.toml` generates `.env.example`, validates a real
   `.env`, and its SOPS-encrypted counterparts are decrypted in-cluster by
   Flux (verified by a Secret materializing from ciphertext in git).
 - `https://auth.<domain>` serves rauthy over a valid cert, the operator's
@@ -198,10 +210,23 @@ OAP `stagecraft` database dies with it, intentionally and without export
   spec 004's GitHub App flow mints short-lived installation tokens from the
   App private key instead of storing customer credentials, which is why
   OAP's `PAT_ENCRYPTION_KEY` has no successor here. The most secure secret
-  store is the one that does not exist. Should a consumer ever appear (a
-  customer-supplied registry credential, a BYO cloud credential, or a stored
-  PAT), the mechanism is `cryptr` (ChaCha20Poly1305, same author as rauthy
-  and hiqlite, and the source of the `ENC_KEYS`/`ENC_KEY_ACTIVE` versioned-key
-  convention rauthy already uses), specced then, against a real caller.
+  store is the one that does not exist.
+
+  **This decision is conditional on App reach** (2026-07-16). It holds only
+  while the installation token can do everything the console must do: not just
+  reads and commits, but scheduling, dispatching Actions runs, and any other
+  verb the governance UI exposes. Those are App permissions (`actions: write`
+  and friends), so the condition is satisfiable by widening the App's permission
+  set, which the installation flow re-consents. If a required console verb ever
+  turns out to be reachable only with a user-supplied credential, this decision
+  reopens and the crypto service becomes real work rather than a deferred note.
+  Verifying the App's permission set covers the console's verbs is a spec 004
+  concern and a gate on that claim, not an assumption to carry silently.
+
+  Should a consumer ever appear (a customer-supplied registry credential, a BYO
+  cloud credential, or a stored PAT), the mechanism is `cryptr`
+  (ChaCha20Poly1305, same author as rauthy and hiqlite, and the source of the
+  `ENC_KEYS`/`ENC_KEY_ACTIVE` versioned-key convention rauthy already uses),
+  specced then, against a real caller.
 - Non-hetzner targets, and multi-cluster or HA topologies.
 - Re-homing the marketing site: the apex stays GitHub Pages.

@@ -4,8 +4,8 @@
     "warnings": [
       {
         "code": "W-001",
-        "message": "spec '010-stagecraft-cluster' directory unit 'platform/' is not a directory",
-        "path": "platform/"
+        "message": "spec '010-stagecraft-cluster' directory unit 'infra/' is not a directory",
+        "path": "infra/"
       }
     ]
   },
@@ -21,7 +21,7 @@
         "sourceField": "establishes",
         "unit": {
           "kind": "directory",
-          "path": "platform/"
+          "path": "infra/"
         }
       }
     ],
@@ -29,5 +29,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "11c5df8b3d19f1251d8ad7d5d0458122f885043868f855253b3f5543024f9675"
+  "shardHash": "b73d9a8d75f3138d18fc3b7740d1851354ad21c86b56b357c9be335eee766d01"
 }

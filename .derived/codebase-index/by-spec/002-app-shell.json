@@ -57,10 +57,6 @@
         "source": "spec-edge"
       },
       {
-        "path": "frontend/",
-        "source": "spec-edge"
-      },
-      {
         "path": "infra.config.dev.json",
         "source": "spec-edge"
       },
@@ -227,19 +223,6 @@
       {
         "locations": [
           {
-            "file": "frontend/"
-          }
-        ],
-        "ownership": true,
-        "sourceField": "establishes",
-        "unit": {
-          "kind": "directory",
-          "path": "frontend/"
-        }
-      },
-      {
-        "locations": [
-          {
             "file": "scripts/"
           }
         ],
@@ -372,5 +355,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "22b4e3bf59b063252ed275b7e2f3a55bb75abf46ec2ad19839e0abb9f044a972"
+  "shardHash": "be43d86be95c8e321e455b8c3291dc9647ebd7c76f66bfd1c26bc6a5e2eded7b"
 }
