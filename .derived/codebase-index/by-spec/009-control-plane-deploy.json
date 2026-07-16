@@ -1,0 +1,33 @@
+{
+  "mapping": {
+    "dependsOn": [
+      "002-app-shell",
+      "008-governance-attestation"
+    ],
+    "implementingPaths": [
+      {
+        "path": "deploy/",
+        "source": "spec-edge"
+      }
+    ],
+    "resolvedUnits": [
+      {
+        "locations": [
+          {
+            "file": "deploy/"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "directory",
+          "path": "deploy/"
+        }
+      }
+    ],
+    "specId": "009-control-plane-deploy",
+    "specStatus": "approved"
+  },
+  "schemaVersion": "1.1.0",
+  "shardHash": "8bb61d3cbd20ce895a7743f9bb9cd5d942a05fd09d941305a66c194d67f74dea"
+}

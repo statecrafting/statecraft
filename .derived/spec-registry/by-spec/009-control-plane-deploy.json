@@ -1,0 +1,31 @@
+{
+  "record": {
+    "created": "2026-07-16",
+    "dependsOn": [
+      "002-app-shell",
+      "008-governance-attestation"
+    ],
+    "establishes": [
+      {
+        "kind": "directory",
+        "path": "deploy/"
+      }
+    ],
+    "id": "009-control-plane-deploy",
+    "implementation": "in-progress",
+    "sectionHeadings": [
+      "009: Self-hosted control plane deployment",
+      "1. Purpose",
+      "2. Territory",
+      "3. Behavior",
+      "4. Acceptance",
+      "5. Out of scope"
+    ],
+    "specPath": "specs/009-control-plane-deploy/spec.md",
+    "status": "approved",
+    "summary": "Give stagecraft its own deployment story so the spec-governed control plane runs on the fleet cluster owned entirely by this repo, with no dependency on the archived open-agentic-platform (OAP) chart or CD. Publish the single-container image to stagecraft's own GHCR namespace, stand it up as a platform-grade K8s deployment reachable at app.stagecraft.ing, seed its own rauthy client, and cut over from the OAP-built stagecraft release. Port the OAP CI tooling worth keeping (AI PR review + changelog, the PR gate pattern), adapted to be OAP-free.\n",
+    "title": "Self-hosted control plane deployment (OAP-independent)"
+  },
+  "shardHash": "4085be2cbeb14fe73666bf85074763a222b8c9cf501dee3f8ee4d39cb560cf3a",
+  "specVersion": "1.1.0"
+}
