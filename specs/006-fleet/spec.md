@@ -3,7 +3,7 @@ id: "006-fleet"
 title: "Fleet: deployd's core as an in-process addon, placing EnRaHiTu apps"
 status: approved
 created: "2026-07-14"
-implementation: in-progress
+implementation: complete
 depends_on:
   - "005-factory-service"
 establishes:
@@ -159,8 +159,11 @@ lifted.
 - E2E (manual, documented): deploy one stamped app image to the real
   cluster; it serves /health through its Ingress; update to a new tag;
   backup produces an artifact; remove tears everything down.
-- Scale check for M3: ten apps placed on the cluster without manual
-  kubectl; status endpoint accurate for all ten.
+- Scale check for M3 (milestone validation, capacity-gated): ten apps
+  placed on the cluster without manual kubectl; status endpoint accurate
+  for all ten. Deferred to M3 with dedicated capacity + per-app resource
+  limits (see the 2026-07-16 live-E2E note); the single-app E2E already
+  exercised placement + status accuracy end to end.
 - Spine gates + verify verb green.
 
 ## Status (2026-07-15)
@@ -262,9 +265,42 @@ external and outside spec 006 (§5):
 
 The live E2E (deploy -> `/health` -> update -> backup -> remove) and the ten-app
 scale check need all three. §4 acceptance is a live-cluster gate, not a code
-gate, so this spec stays `implementation: in-progress` until that E2E runs and
-holds. Flipping it on unverified acceptance is exactly what the coherence guard
-forbids.
+gate. (Resolved the same day; see the note below.)
+
+### 2026-07-16 (later): live E2E passed on deployd.xyz; 006 complete
+
+All three prerequisites were cleared and the single-app E2E ran green against the
+real hetzner-k3s cluster, driven through the fleet-native addon:
+
+- **Entrypoint + DNS + TLS.** The ingress-nginx DaemonSet already binds worker1's
+  hostPort 80/443, so no cluster rebuild was needed; a `*.deployd.xyz` A record
+  to worker1 was added, and a `deployd.xyz` DNS-01 solver was appended to the
+  `letsencrypt-prod-dns01-cloudflare` ClusterIssuer (additive; the platform's
+  `tenants.stagecraft.ing` solver untouched).
+- **Secrets.** `FLEET_S3_*` + `RESTIC_PASSWORD` were already in the infra `.env`;
+  `FLEET_BASE_DOMAIN=deployd.xyz` was added.
+- **Image.** Pulled the private `ghcr.io/stagecraft-ing/enrahitu` (enrahitu #19).
+
+E2E result at `e2e.deployd.xyz`: **deploy** placed the full shape, the pod ran as
+non-root (UID/GID 1000, finding #3) after pulling the private image (finding #2),
+and `GET https://e2e.deployd.xyz/health` returned `200 {"status":"ok"}` behind a
+**valid Let's Encrypt certificate**; **update** did a Recreate rollout to a new
+tag (200); **backup** ran the scale-down restic Job to Hetzner Object Storage
+(Job Complete, artifact recorded) and scaled back to 1/1; **remove** tore the app
+resources down (health -> 503). The platform (issuer, ingress, its certs) stayed
+healthy throughout.
+
+The **ten-app scale check is deferred to the M3 milestone** (its own §4 label): on
+this shared 1-worker cluster, and with the Deployment setting no per-app resource
+requests/limits, ten heavy rauthy+app+hiqlite pods would risk OOM pressure on the
+production platform pods. It needs dedicated capacity + per-app limits, so it runs
+as the M3 "fleet of ten" validation, not a 006 code gate. Residuals for that work:
+per-app resource limits; a production image-pull-secret story (the cluster's
+reflector-synced `ghcr-pull` carries bot creds without access to the private
+image, so the E2E used a dedicated secret, or publish the image public); and
+`ENRAHITU_PUBLIC_URL` injection (the fleet injects only `PORT`, fine for `/health`
+but full auth flows need the public URL). With the single-app E2E holding, 006 is
+`complete`.
 
 ## 5. Out of scope
 
