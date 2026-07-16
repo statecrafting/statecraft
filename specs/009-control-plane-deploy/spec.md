@@ -18,8 +18,10 @@ depends_on:
   - "008-governance-attestation"
 establishes:
   - { kind: directory, path: "deploy/" }
+  - ".github/workflows/image.yml"
+  - ".dockerignore"
 # Further ownership edges land with their units during implementation (owned
-# paths and this spec move together): .github/workflows/{image,cd,ai-pr-review,
+# paths and this spec move together): .github/workflows/{cd,ai-pr-review,
 # ai-changelog}.yml (see §2 Territory).
 ---
 
@@ -104,6 +106,22 @@ ingress already provisioned under this effort).
 - The OAP `stagecraft` release is retired (or demoted to standby) without
   breaking the platform (auth, deployd, fleet, marketing site unaffected).
 - `ai-pr-review.yml` runs on a PR and posts a review; spine gates + verify green.
+
+## Status (2026-07-16)
+
+Stage 1 (image publish) in progress. Finding: `scripts/docker-build.sh` (owned
+by spec 002) was a verbatim enrahitu copy referencing vendored paths
+(`vendor/encore/`, `packages/toolchain/`, `addon/hiqlite-native.*.node`) that do
+not exist here, so stagecraft had no working image build. `.github/workflows/image.yml`
+replaces it with an npm-toolchain build (no vendored cross-build): `npm ci` on a
+linux runner pulls the prebuilt linux Encore runtime / tsparser / hiqlite from
+the `@enrahitu/*-linux-x64` optional-dependency packages; only stagecraft's own
+`governance-native` + `fleet-native` addons build here. amd64 only (the cluster
+is x86-64), on ubuntu-22.04 (glibc <= the node:24-slim base). No `/health` smoke
+in the image job: the control plane needs Postgres (spec 003) to be healthy, so
+runtime verification moves to the deploy stage. The legacy 002 `docker-build.sh`
+is left untouched (dead code) and gets retired/adapted when the deploy stage
+lands. Validated by running the workflow and pulling the image.
 
 ## 5. Out of scope
 

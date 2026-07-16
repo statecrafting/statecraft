@@ -6,6 +6,14 @@
     ],
     "implementingPaths": [
       {
+        "path": ".dockerignore",
+        "source": "spec-edge"
+      },
+      {
+        "path": ".github/workflows/image.yml",
+        "source": "spec-edge"
+      },
+      {
         "path": "deploy/",
         "source": "spec-edge"
       }
@@ -23,11 +31,37 @@
           "kind": "directory",
           "path": "deploy/"
         }
+      },
+      {
+        "locations": [
+          {
+            "file": ".dockerignore"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "file",
+          "path": ".dockerignore"
+        }
+      },
+      {
+        "locations": [
+          {
+            "file": ".github/workflows/image.yml"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "file",
+          "path": ".github/workflows/image.yml"
+        }
       }
     ],
     "specId": "009-control-plane-deploy",
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "8bb61d3cbd20ce895a7743f9bb9cd5d942a05fd09d941305a66c194d67f74dea"
+  "shardHash": "7d99ef151db7f4fca44669b1f360c0ad84ec0b7a7b211714ddea900f44e5a0ac"
 }
