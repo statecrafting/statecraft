@@ -17,14 +17,14 @@ describe("stamp attestation", () => {
   const base = {
     mode: "adopt" as const,
     appName: "chancery",
-    org: "stagecraft-ing",
+    org: "statecraft-ing",
     templateCommit: "34134f9a48ddff75cca1df4f9a15e06140357bdd",
     contractVersion: "0.5.0",
     posture: "assisted" as const,
   };
 
   it("builds the subject as <org>/<appName>", () => {
-    expect(stampSubject(base)).toBe("stagecraft-ing/chancery");
+    expect(stampSubject(base)).toBe("statecrafting/chancery");
   });
 
   it("carries the mode so create vs adopt is remembered in the ledger", () => {
@@ -36,7 +36,7 @@ describe("stamp attestation", () => {
     expect(stampAttestationPayload(base)).toEqual({
       mode: "adopt",
       appName: "chancery",
-      org: "stagecraft-ing",
+      org: "statecraft-ing",
       templateCommit: "34134f9a48ddff75cca1df4f9a15e06140357bdd",
       contractVersion: "0.5.0",
       posture: "assisted",

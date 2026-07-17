@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 /** Public enrahitu template repo. Overridable (e.g. a mirror) via env. */
 export const TEMPLATE_REPO =
-  process.env.FACTORY_TEMPLATE_REPO ?? "https://github.com/stagecraft-ing/enrahitu.git";
+  process.env.FACTORY_TEMPLATE_REPO ?? "https://github.com/statecrafting/enrahitu.git";
 
 /**
  * Pinned template commit. Default: the enrahitu v0.2.0 release (contract 0.5.0:
@@ -34,11 +34,11 @@ export const FACTORY_DATA_DIR =
 export const TEMPLATE_CACHE_DIR = join(FACTORY_DATA_DIR, "enrahitu.git");
 
 /** Identity recorded in the born-with cert's stampedBy field. */
-export const FACTORY_STAMPED_BY_ID = "stagecraft/factory@1";
+export const FACTORY_STAMPED_BY_ID = "statecraft/factory@1";
 
 /** Git commit author for the initial stamped commit (spec 005 §3 step 5). */
 export const FACTORY_GIT_AUTHOR_NAME = "Stagecraft Factory";
-export const FACTORY_GIT_AUTHOR_EMAIL = "factory@stagecraft.ing";
+export const FACTORY_GIT_AUTHOR_EMAIL = "factory@statecraft.ing";
 
 /** How long to wait for the born-green verify run before failing (spec 005 §3 step 6). */
 export const VERIFY_TIMEOUT_MS = 30 * 60 * 1000;

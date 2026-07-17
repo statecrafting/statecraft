@@ -7,21 +7,21 @@
 #
 # Start with: npm run dev:db
 # Then point the app at it:
-#   ENRAHITU_LEDGER_URL=postgres://stagecraft:stagecraft@localhost:5433/stagecraft
+#   ENRAHITU_LEDGER_URL=postgres://statecraft:statecraft@localhost:5433/statecraft
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: stagecraft-postgres
+    container_name: statecraft-postgres
     environment:
-      POSTGRES_USER: stagecraft
-      POSTGRES_PASSWORD: stagecraft
-      POSTGRES_DB: stagecraft
+      POSTGRES_USER: statecraft
+      POSTGRES_PASSWORD: statecraft
+      POSTGRES_DB: statecraft
     ports:
       - "5433:5432"
     volumes:
-      - stagecraft-pgdata:/var/lib/postgresql/data
+      - statecraft-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stagecraft -d stagecraft"]
+      test: ["CMD-SHELL", "pg_isready -U statecraft -d statecraft"]
       interval: 5s
       timeout: 5s
       retries: 10

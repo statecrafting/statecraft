@@ -39,22 +39,22 @@ describe("certHash", () => {
 describe("buildCert", () => {
   const base = {
     appName: "smoke-app",
-    org: "stagecraft-ing",
+    org: "statecraft-ing",
     templateName: "enrahitu",
     templateVersion: "0.1.0",
     contractVersion: "0.5.0",
     commit: "34134f9a48ddff75cca1df4f9a15e06140357bdd",
-    stampedById: "stagecraft/factory@1",
+    stampedById: "statecraft/factory@1",
     stampedAt: new Date("2026-07-15T12:00:00Z"),
   };
 
   it("builds a schema-shaped cert with an explicit posture and defaulted:false", () => {
     const cert = buildCert({ ...base, posture: "assisted" });
     expect(cert.certVersion).toBe("1");
-    expect(cert.app).toEqual({ name: "smoke-app", org: "stagecraft-ing" });
+    expect(cert.app).toEqual({ name: "smoke-app", org: "statecraft-ing" });
     expect(cert.template.commit).toBe(base.commit);
     expect(cert.agenticPostureBinding).toEqual({ posture: "assisted", defaulted: false });
-    expect(cert.stampedBy).toEqual({ kind: "factory", id: "stagecraft/factory@1" });
+    expect(cert.stampedBy).toEqual({ kind: "factory", id: "statecraft/factory@1" });
     expect(cert.stampedAt).toBe("2026-07-15T12:00:00.000Z");
   });
 

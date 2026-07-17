@@ -276,10 +276,10 @@ real hetzner-k3s cluster, driven through the fleet-native addon:
   hostPort 80/443, so no cluster rebuild was needed; a `*.deployd.xyz` A record
   to worker1 was added, and a `deployd.xyz` DNS-01 solver was appended to the
   `letsencrypt-prod-dns01-cloudflare` ClusterIssuer (additive; the platform's
-  `tenants.stagecraft.ing` solver untouched).
+  `tenants.statecraft.ing` solver untouched).
 - **Secrets.** `FLEET_S3_*` + `RESTIC_PASSWORD` were already in the infra `.env`;
   `FLEET_BASE_DOMAIN=deployd.xyz` was added.
-- **Image.** Pulled the private `ghcr.io/stagecraft-ing/enrahitu` (enrahitu #19).
+- **Image.** Pulled the private `ghcr.io/statecrafting/enrahitu` (enrahitu #19).
 
 E2E result at `e2e.deployd.xyz`: **deploy** placed the full shape, the pod ran as
 non-root (UID/GID 1000, finding #3) after pulling the private image (finding #2),

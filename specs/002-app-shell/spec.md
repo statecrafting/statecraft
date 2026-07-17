@@ -5,7 +5,7 @@ status: approved
 created: "2026-07-14"
 implementation: complete
 depends_on:
-  - "001-stagecraft-thesis"
+  - "001-statecraft-thesis"
 establishes:
   - "package.json"
   - "package-lock.json"
@@ -26,10 +26,10 @@ establishes:
   - { kind: directory, path: "backend/web/" }
   - { kind: directory, path: "scripts/" }
   - { kind: directory, path: "docker/" }
-  - { kind: directory, path: ".stagecraft/" }
+  - { kind: directory, path: ".statecraft/" }
 summary: >
   Stagecraft becomes a running EnRaHiTu app: the slimmed chassis from
-  stagecraft-ing/enrahitu is brought into this repo (the two-directory
+  statecrafting/enrahitu is brought into this repo (the two-directory
   backend/ + frontend/ layout, CoreLedger, auth baseline, rauthy proxy,
   health, packaging, verify workflow; the Encore toolchain and the
   hiqlite addon arrive as pinned @enrahitu/* npm packages, not vendored
@@ -84,7 +84,7 @@ enrahitu 018 §4 delegated to the first stamped consumer.
    generate-keys.ts, sync-dev-rauthy-secret.mjs, verify-born-with.mjs
    and its test, fixtures/). Root files: `encore.app`, `tsconfig.json`,
    `vitest.config.ts`, `vitest.setup.ts`, `infra.config.dev.json`,
-   `infra.config.json`, `.stagecraft/born-with.schema.json`, and a
+   `infra.config.json`, `.statecraft/born-with.schema.json`, and a
    rewritten `.github/workflows/verify.yml`. NOT imported (the slimming,
    spec 019 §1): `vendor/`, `addon/` (enrahitu's hiqlite source),
    `packages/`, `template.toml`, and enrahitu's governance identity

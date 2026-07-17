@@ -5,7 +5,7 @@ status: approved
 created: "2026-07-14"
 implementation: complete
 depends_on:
-  - "001-stagecraft-thesis"
+  - "001-statecraft-thesis"
 establishes:
   - { kind: directory, path: "backend/governance/" }
   - { kind: directory, path: "addon/governance-native/" }
@@ -32,7 +32,7 @@ Four external crates, extracted from the OAP policy-kernel
 crates.io under the stagecraft-ing org (verified: canonical-keysort-json
 0.1.0, attest-ledger-types/core/cli 0.1.0, action-gate-types/core
 0.1.0, trust-window 0.1.0; repository fields point at
-github.com/stagecraft-ing/*). Consume from crates.io with exact version
+github.com/statecrafting/*). Consume from crates.io with exact version
 pins (`=0.1.x` while pre-1.0); do NOT use git dependencies. Local
 working copies exist at ~/DevWork/<name> for reference reading if the
 session has access.

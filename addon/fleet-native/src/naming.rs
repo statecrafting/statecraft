@@ -60,7 +60,7 @@ pub fn labels(app: &str) -> BTreeMap<String, String> {
     m.insert("app.kubernetes.io/name".into(), app.to_string());
     m.insert("app.kubernetes.io/instance".into(), app.to_string());
     m.insert("app.kubernetes.io/managed-by".into(), MANAGED_BY.into());
-    m.insert("fleet.stagecraft.ing/app".into(), app.to_string());
+    m.insert("fleet.statecraft.ing/app".into(), app.to_string());
     m
 }
 

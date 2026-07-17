@@ -2,7 +2,7 @@
  * Tenants service configuration: the GitHub App identity and its secrets.
  *
  * The App itself is fixed (spec 004 §1): "StageCraft.ing GitHub App", App ID
- * 3319911, slug `stagecraft-ing-github-app`. Its three secrets live in the
+ * 3319911, slug `statecraft-ing-github-app`. Its three secrets live in the
  * central infra config and are wired into Encore secrets (infra.config.json).
  * In a deployed/self-host environment `secret()` returns the bound value; in
  * local dev it returns "" and we fall back to `process.env` so an operator can
@@ -16,7 +16,7 @@ const privateKeyB64Secret = secret("GITHUB_APP_PRIVATE_KEY_B64");
 const webhookSecret = secret("GITHUB_WEBHOOK_SECRET");
 
 /** The App's public slug: used to build the installation URL (spec 004 §1). */
-export const GITHUB_APP_SLUG = "stagecraft-ing-github-app";
+export const GITHUB_APP_SLUG = "statecraft-ing-github-app";
 
 /** REST base and pinned API version (spec 004 §3: plain fetch, auditable). */
 export const GITHUB_API_BASE = "https://api.github.com";

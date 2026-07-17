@@ -13,7 +13,7 @@
         "source": "spec-edge"
       },
       {
-        "path": ".stagecraft/",
+        "path": ".statecraft/",
         "source": "spec-edge"
       },
       {
@@ -93,14 +93,14 @@
       {
         "locations": [
           {
-            "file": ".stagecraft/"
+            "file": ".statecraft/"
           }
         ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
           "kind": "directory",
-          "path": ".stagecraft/"
+          "path": ".statecraft/"
         }
       },
       {

@@ -81,7 +81,7 @@ async function githubCall<T>(path: string, opts: GithubCallOptions): Promise<T> 
       Authorization: opts.auth,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": GITHUB_API_VERSION,
-      "User-Agent": "stagecraft-control-plane",
+      "User-Agent": "statecraft-control-plane",
       ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
     },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,

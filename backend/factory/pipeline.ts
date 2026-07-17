@@ -119,8 +119,8 @@ export async function runStampPipeline(jobId: string): Promise<void> {
     } else {
       await v0Substitute(workdir, slots);
       if (certPath) {
-        const dest = join(workdir, ".stagecraft", "born-with.json");
-        await mkdir(join(workdir, ".stagecraft"), { recursive: true });
+        const dest = join(workdir, ".statecraft", "born-with.json");
+        await mkdir(join(workdir, ".statecraft"), { recursive: true });
         await writeFile(dest, await readFile(certPath, "utf8"), "utf8");
       }
     }

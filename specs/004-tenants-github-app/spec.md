@@ -29,7 +29,7 @@ Use the existing GitHub App; do not create a new one:
 
 - **"StageCraft.ing GitHub App"**: App ID `3319911`, slug
   `stagecraft-ing-github-app`, Client ID `Iv23liGNXeou5MxTTKxR`,
-  public link `https://github.com/apps/stagecraft-ing-github-app`.
+  public link `https://github.com/apps/statecraft-ing-github-app`.
   Already installed org-wide on stagecraft-ing (installation id
   `125344051`, all repositories), which doubles as the test
   installation for e2e.
@@ -46,7 +46,7 @@ Use the existing GitHub App; do not create a new one:
   secrets for this app; never commit or echo values. Use
   `GITHUB_APP_SLUG=stagecraft-ing-github-app`.
 - The App's webhook is active and points at the legacy plane
-  (`https://stagecraft.ing/api/github/webhook`). For local dev,
+  (`https://statecraft.ing/api/github/webhook`). For local dev,
   leave it; implement and unit-test HMAC verification regardless.
   Repointing the webhook to the new control plane happens when it has
   a public URL (fleet-deployed), not before.

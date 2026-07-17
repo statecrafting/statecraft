@@ -43,7 +43,7 @@ endpoints, CoreLedger entities, template cache, stamp pipeline.
 
 ## 3. Behavior
 
-- **Template source**: `git@github.com:stagecraft-ing/enrahitu.git`,
+- **Template source**: `git@github.com:statecrafting/enrahitu.git`,
   pinned by config to a commit SHA (env `FACTORY_TEMPLATE_REF`,
   default a recorded known-good SHA; never floating main). A warmup
   step keeps a local bare-clone cache under the app's data dir and
@@ -79,7 +79,7 @@ endpoints, CoreLedger entities, template cache, stamp pipeline.
      enrahitu spec 012 §3 (posture from the stamp request, default
      REQUEST-EXPLICIT: the API requires the caller to pass posture;
      never default it silently), keysorted-canonical sha256 hash,
-     place at `.stagecraft/born-with.json`, run the contract's
+     place at `.statecraft/born-with.json`, run the contract's
      provenance verify command, store certHash on the job. Then anchor
      the cert in the governance attestation ledger (spec 008): append a
      `stamp` attestation carrying the certHash and the stamp mode,

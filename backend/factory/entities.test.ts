@@ -55,7 +55,7 @@ for (const arm of arms) {
         tenantId: `t-${randomUUID()}`,
         installationId: "125344051",
         appName: "smoke-app",
-        org: "stagecraft-ing",
+        org: "statecraft-ing",
         frontend: "react-rr7",
         pages: true,
         templateRef: "34134f9a48ddff75cca1df4f9a15e06140357bdd",
@@ -81,14 +81,14 @@ for (const arm of arms) {
         status: "green",
         certHash: "ad33056e",
         checksRunId: "999",
-        prUrl: "https://github.com/stagecraft-ing/smoke-app/pull/1",
+        prUrl: "https://github.com/statecrafting/smoke-app/pull/1",
         updatedAt: new Date(),
       });
       const done = await repo.findById(job.id);
       expect(done?.status).toBe("green");
       expect(done?.certHash).toBe("ad33056e");
       expect(done?.checksRunId).toBe("999");
-      expect(done?.prUrl).toBe("https://github.com/stagecraft-ing/smoke-app/pull/1");
+      expect(done?.prUrl).toBe("https://github.com/statecrafting/smoke-app/pull/1");
     });
   });
 }

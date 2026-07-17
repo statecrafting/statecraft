@@ -55,7 +55,7 @@ scaffold = "node scripts/stamp.mjs"
 # template itself. Kept out of the verify verb on purpose: cert validation is a
 # provenance concern the factory invokes separately, since verify must also
 # pass here, where there is no cert.
-cert_path = ".stagecraft/born-with.json"
-cert_schema = ".stagecraft/born-with.schema.json"
+cert_path = ".statecraft/born-with.json"
+cert_schema = ".statecraft/born-with.schema.json"
 verify = "node scripts/verify-born-with.mjs"
 postures = ["none", "assisted", "autonomous"]

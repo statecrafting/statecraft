@@ -19,7 +19,7 @@ import { secret } from "encore.dev/config";
  * set.
  */
 export function governanceStateDir(): string {
-  return process.env.STAGECRAFT_GOVERNANCE_STATE_DIR ?? "./.data/governance";
+  return process.env.statecraft_GOVERNANCE_STATE_DIR ?? "./.data/governance";
 }
 
 /**
@@ -35,7 +35,7 @@ export function governanceStateDir(): string {
  * and containers can point at a different config dir.
  */
 const gateConfigDir =
-  process.env.STAGECRAFT_GOVERNANCE_CONFIG_DIR ??
+  process.env.statecraft_GOVERNANCE_CONFIG_DIR ??
   join(process.cwd(), "backend/governance/config");
 
 export const GATE_CONFIG_JSON: string = readFileSync(

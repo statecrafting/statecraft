@@ -10,14 +10,14 @@ summary: >
   open-agentic-platform (OAP) chart, CD, or secret set. Publish the
   single-container image to stagecraft's own GHCR namespace (stage 1, done),
   then stand the control plane up on the 010 cluster as a platform-grade K8s
-  deployment reachable at app.stagecraft.ing, wired to the real Encore secret
+  deployment reachable at app.statecraft.ing, wired to the real Encore secret
   contract and seeded with its own rauthy client. Port the OAP CI tooling
   worth keeping (AI PR review + changelog, the PR gate pattern), adapted to be
   OAP-free.
 depends_on:
   - "002-app-shell"
   - "008-governance-attestation"
-  - "010-stagecraft-cluster"
+  - "010-statecraft-cluster"
 establishes:
   - ".github/workflows/image.yml"
   - ".dockerignore"
@@ -36,14 +36,14 @@ establishes:
 Stagecraft is "the first production EnRaHiTu app" and "allowed to be a
 platform-grade K8s deployment" (spec 001 §3), but it has no deployment of its
 own. What runs on the old cluster is the OAP build
-(`ghcr.io/stagecraft-ing/open-agentic-platform/stagecraft`), deployed by OAP's
+(`ghcr.io/statecrafting/open-agentic-platform/statecraft`), deployed by OAP's
 Helm chart and `cd-stagecraft.yml`. Everything needed to build, publish, deploy,
 and operate the control plane must live in this repo. This spec makes stagecraft
 self-hosting and severs the OAP dependency.
 
 Two corrections to the original framing, verified 2026-07-16:
 
-- **The OAP repo is not archived.** `stagecraft-ing/open-agentic-platform` is
+- **The OAP repo is not archived.** `statecrafting/open-agentic-platform` is
   public and was last pushed 2026-07-15. The dependency on it is an ownership
   defect, not decay.
 - **The OAP build is a different application, not an older stagecraft.** Its pod
@@ -53,13 +53,13 @@ Two corrections to the original framing, verified 2026-07-16:
   control plane, and none is wanted: it is discarded, not migrated.
 
 The trigger is concrete: the control plane has no reachable URL. Verified
-2026-07-16, **no `app.stagecraft.ing` ingress exists at all**: the only ingresses
-are `minio.stagecraft.ing` and `stagecraft.ing` (the apex, which DNS routes to
+2026-07-16, **no `app.statecraft.ing` ingress exists at all**: the only ingresses
+are `minio.statecraft.ing` and `stagecraft.ing` (the apex, which DNS routes to
 the GitHub Pages marketing site), so nginx answers the unmatched host with its
 default backend and the `Kubernetes Ingress Controller Fake Certificate`. The
-OAP control plane has therefore been unreachable, and `app.stagecraft.ing`
+OAP control plane has therefore been unreachable, and `app.statecraft.ing`
 currently gives a TLS warning followed by a 404. The chosen public host is
-**app.stagecraft.ing**.
+**app.statecraft.ing**.
 
 **Scope after the 010 re-scope (2026-07-16).** This spec no longer stands the
 control plane up on the OAP cluster, nor retires the OAP release: spec 010
@@ -72,7 +72,7 @@ cluster, plus the ported CI.
 
 - `.github/workflows/image.yml`: build the single-container image from
   `docker/Dockerfile` (the enrahitu chassis, spec 002) and push to
-  **`ghcr.io/stagecraft-ing/stagecraft`** on release/`workflow_dispatch`,
+  **`ghcr.io/statecrafting/statecraft`** on release/`workflow_dispatch`,
   multi-arch amd64 (the fleet cluster is x86-64), the same push+manifest shape
   proved for the enrahitu image.
 - `deploy/`: a stagecraft-owned Helm chart (or plain manifests + a
@@ -96,7 +96,7 @@ cluster, plus the ported CI.
 ## 3. Behavior
 
 - **Image.** One amd64 (multi-arch capable) image at
-  `ghcr.io/stagecraft-ing/stagecraft:<sha>` + `:latest` + the release tag.
+  `ghcr.io/statecrafting/statecraft:<sha>` + `:latest` + the release tag.
   Private is acceptable; the deploy provides pull creds (a namespace
   `dockerconfigjson` secret), matching the fleet finding that the cluster's
   reflector-synced `ghcr-pull` carries bot creds without access to new packages.
@@ -147,7 +147,7 @@ cluster, plus the ported CI.
   verify `app.<domain>` serves the governance UI over a valid cert and a real
   rauthy login completes, and only then let 010 cut the DNS. The apex
   `stagecraft.ing` stays the marketing site; the control plane lives at
-  `app.stagecraft.ing`. Rollback is 010's: the old cluster stays until proven.
+  `app.statecraft.ing`. Rollback is 010's: the old cluster stays until proven.
 - **Ported CI (OAP-free).** `ai-pr-review.yml` runs the Claude CLI over the PR
   diff and posts a review (no `ANTHROPIC_API_KEY` committed; auth via the
   workflow's configured credential). `ai-changelog.yml` its companion. The PR
@@ -157,12 +157,12 @@ cluster, plus the ported CI.
 
 ## 4. Acceptance
 
-- `image.yml` publishes a pullable `ghcr.io/stagecraft-ing/stagecraft` image;
+- `image.yml` publishes a pullable `ghcr.io/statecrafting/statecraft` image;
   verified by pulling it. **(Met 2026-07-16, stage 1.)**
 - The stagecraft-owned deploy stands up the control plane on the spec 010
   cluster with no OAP chart, CD, or secret dependency, wired to the 11 Encore
   secrets and the non-secret env named in §3, against its own empty database.
-- `https://app.stagecraft.ing` serves the governance UI over a valid
+- `https://app.statecraft.ing` serves the governance UI over a valid
   cert (not the ingress default) and a real rauthy login completes end to end.
 - `ai-pr-review.yml` runs on a PR and posts a review; spine gates + verify green.
 
@@ -186,7 +186,7 @@ runtime verification moves to the deploy stage. The legacy 002 `docker-build.sh`
 is left untouched (dead code) and gets retired/adapted when the deploy stage
 lands.
 
-Validated (dispatched on a branch, iterated to green): `ghcr.io/stagecraft-ing/stagecraft`
+Validated (dispatched on a branch, iterated to green): `ghcr.io/statecrafting/statecraft`
 is published and pullable (`:latest` + `:<sha>`, amd64). Two fixes landed to get
 there: `build:web` needed an explicit `npm --prefix webapp ci` (webapp is not a
 root workspace), and the prebuilt `@enrahitu/toolchain-linux-x64` binaries require

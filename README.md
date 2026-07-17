@@ -2,7 +2,7 @@
 
 The governed agentic delivery control plane: intent becomes a governed
 spec, the factory stamps an application from the
-[EnRaHiTu template](https://github.com/stagecraft-ing/enrahitu), the fleet
+[EnRaHiTu template](https://github.com/statecrafting/enrahitu), the fleet
 operates the resulting hermetic containers, and the customer's code lives
 in the customer's GitHub org the entire time.
 
@@ -33,7 +33,7 @@ React Router v7).
 ## Chassis
 
 Stagecraft is stamped from the
-[enrahitu template](https://github.com/stagecraft-ing/enrahitu) as its
+[enrahitu template](https://github.com/statecrafting/enrahitu) as its
 first production consumer. The app shell (spec 002) imports the slimmed
 two-directory chassis (`backend/` + `frontend/`) at enrahitu commit
 `83a4551` (2026-07-15); the Encore toolchain and the hiqlite addon arrive
@@ -47,14 +47,14 @@ its own once the factory can emit one.
 
 | Repo | License | Role |
 |---|---|---|
-| [enrahitu](https://github.com/stagecraft-ing/enrahitu) | Apache-2.0 | The template chassis: Encore.ts + rauthy + hiqlite + Turso, single container |
+| [enrahitu](https://github.com/statecrafting/enrahitu) | Apache-2.0 | The template chassis: Encore.ts + rauthy + hiqlite + Turso, single container |
 | stagecraft (this repo) | AGPL-3.0 | The control plane: tenants, factory, fleet, governance UI |
-| [stagecraft-cli](https://github.com/stagecraft-ing/stagecraft-cli) | Apache-2.0 | The CLI + MCP server: governance verbs for humans and agents |
-| [stagecraft.ing](https://github.com/stagecraft-ing/stagecraft.ing) | n/a | Website and docs |
+| [stagecraft-cli](https://github.com/statecrafting/statecraft-cli) | Apache-2.0 | The CLI + MCP server: governance verbs for humans and agents |
+| [stagecraft.ing](https://github.com/statecrafting/statecraft.ing) | n/a | Website and docs |
 
 ## Governance
 
-Governed by [spec-spine](https://github.com/stagecraft-ing/spec-spine)
+Governed by [spec-spine](https://github.com/statecrafting/spec-spine)
 (`cargo install spec-spine-cli`):
 
 ```bash

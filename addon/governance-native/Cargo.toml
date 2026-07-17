@@ -21,7 +21,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # The four governance crates, exact-pinned from crates.io per spec 008 §1
-# (published under the stagecraft-ing org; no git deps).
+# (published under the statecraft-ing org; no git deps).
 canonical-keysort-json = "=0.1.0"
 attest-ledger-types = "=0.1.0"
 attest-ledger-core = "=0.1.0"

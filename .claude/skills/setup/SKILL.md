@@ -23,7 +23,7 @@ No Rust toolchain: use the prebuilt installer CI uses
 (`.github/workflows/spec-spine.yml` pins the version; match it):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stagecraft-ing/spec-spine/main/install.sh | \
+curl -fsSL https://raw.githubusercontent.com/statecrafting/spec-spine/main/install.sh | \
   SPEC_SPINE_VERSION=v0.10.0 SPEC_SPINE_BIN_DIR="$HOME/.local/bin" sh
 ```
 

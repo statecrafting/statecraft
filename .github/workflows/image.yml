@@ -1,9 +1,9 @@
-# Build + publish the stagecraft control-plane single-container image
+# Build + publish the statecraft control-plane single-container image
 # (spec 009). Unlike the enrahitu template, the toolchain is consumed as npm
 # packages (@enrahitu/toolchain, @enrahitu/hiqlite-native): `npm ci` on a linux
 # runner pulls the prebuilt linux Encore runtime / tsparser / hiqlite from the
 # @enrahitu/*-linux-x64 optional-dependency packages, so there is no vendored
-# Rust cross-build. Only stagecraft's OWN two addons (governance-native,
+# Rust cross-build. Only statecraft's OWN two addons (governance-native,
 # fleet-native) build here, natively.
 #
 # amd64 only: the fleet cluster is x86-64. The prebuilt @enrahitu/toolchain-linux-x64
@@ -46,7 +46,7 @@ jobs:
       # (@enrahitu/toolchain-linux-x64 -> encore-runtime.node + tsparser-encore,
       # @enrahitu/hiqlite-native-linux-x64-gnu -> the hiqlite .node).
       - run: npm ci
-      - name: Build stagecraft's own addons (governance + fleet, native linux)
+      - name: Build statecraft's own addons (governance + fleet, native linux)
         run: npm run build:addon
       # webapp is not a root workspace and has its own lockfile; build:web only
       # runs `vite build`, it does not install. Install its deps first.
@@ -63,14 +63,14 @@ jobs:
           node node_modules/@enrahitu/toolchain/lib/augment-infra.mjs \
             infra.config.json .encore/build/compile-result.json infra.config.docker.json
       - name: Build the base image (app + vendored-in-npm runtime)
-        run: docker build -f docker/Dockerfile.base -t stagecraft-api:latest .
+        run: docker build -f docker/Dockerfile.base -t statecraft-api:latest .
       - name: Build the final image (+ rauthy)
-        run: docker build -f docker/Dockerfile --build-arg BASE_IMAGE=stagecraft-api:latest -t stagecraft:latest .
+        run: docker build -f docker/Dockerfile --build-arg BASE_IMAGE=statecraft-api:latest -t statecraft:latest .
       - name: Report built image arch
-        run: docker image inspect stagecraft:latest --format 'built stagecraft:latest ({{.Architecture}})'
+        run: docker image inspect statecraft:latest --format 'built statecraft:latest ({{.Architecture}})'
       - name: Push to GHCR
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/stagecraft
+          IMAGE: ghcr.io/${{ github.repository_owner }}/statecraft
         run: |
           set -euo pipefail
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin

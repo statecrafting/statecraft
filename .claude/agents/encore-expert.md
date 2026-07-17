@@ -18,7 +18,7 @@ mutation: read-only
 driven by the vendored toolchain (no encore CLI), CoreLedger instead of
 SQLDatabase, in-process hiqlite instead of Redis, rauthy same-origin behind
 the idp proxy. Stagecraft is itself an EnRaHiTu app: spec 002 imports the
-chassis from stagecraft-ing/enrahitu, and every control-plane service
+chassis from statecrafting/enrahitu, and every control-plane service
 (tenants, factory, fleet) is an Encore.ts service on that shell. Grounds
 every answer in the repo's actual primitives; proposes implementations,
 never edits files (hand the plan to `implementer`).

@@ -1,11 +1,11 @@
 ---
-id: "010-stagecraft-cluster"
-title: "The stagecraft cluster: Flux GitOps, SOPS secrets, platform services"
+id: "010-statecraft-cluster"
+title: "The statecraft cluster: Flux GitOps, SOPS secrets, platform services"
 status: approved
 created: "2026-07-16"
 implementation: pending
 depends_on:
-  - "001-stagecraft-thesis"
+  - "001-statecraft-thesis"
 establishes:
   - { kind: directory, path: "infra/" }
 summary: >
@@ -30,7 +30,7 @@ live cluster:
 
 - The nodes are `oap-hetzner-master1` and `oap-hetzner-pool-worker-worker1`.
 - Flux's GitRepository is
-  `ssh://git@github.com/stagecraft-ing/open-agentic-platform` (public, **not**
+  `ssh://git@github.com/statecrafting/open-agentic-platform` (public, **not**
   archived, last pushed 2026-07-15). It reconciles cert-manager,
   ingress-nginx, rauthy, monitoring, and reflector into this cluster from
   another product's repository.
@@ -58,7 +58,7 @@ starting clean is not.
 - `infra/`: everything infrastructure, owned by this spec.
   - `infra/hetzner/`: cluster provisioning (hetzner-k3s config, node
     pools, the operator bootstrap).
-  - `infra/gitops/clusters/stagecraft-hetzner/`: the Flux entrypoint and
+  - `infra/gitops/clusters/statecraft-hetzner/`: the Flux entrypoint and
     the kustomizations it reconciles.
   - `infra/secrets/catalog.toml`: the single documented secret source.
   - `infra/secrets/*.sops.yaml`: SOPS-encrypted cluster secrets.
@@ -85,14 +85,14 @@ or a coordinated 002 edit, not by silently widening this spec's territory.
 
 hetzner-k3s, x86-64, nodes named `stagecraft-hetzner-*`, provisioned
 alongside the existing cluster and never sharing its state. The operator
-kubeconfig is `~/.config/stagecraft-ing/infra/hetzner/kubeconfig`; the
+kubeconfig is `~/.config/statecrafting/infra/hetzner/kubeconfig`; the
 operator `.env` is its sibling. Both paths exist and are empty as of
 2026-07-16.
 
 ### GitOps
 
 Flux bootstrapped against this repository at
-`infra/gitops/clusters/stagecraft-hetzner`. Acceptance includes a
+`infra/gitops/clusters/statecraft-hetzner`. Acceptance includes a
 zero-hit grep: no manifest, HelmRelease, or GitRepository on the new cluster
 may reference `open-agentic-platform`.
 
@@ -105,7 +105,7 @@ value. **It holds no values.** From it:
 - **`.env.example`** is generated: commented, documented, committed. The
   catalog carries the prose so the generated artifact does not have to.
 - **The local-dev `.env`** (gitignored, at
-  `~/.config/stagecraft-ing/infra/hetzner/.env`) is validated against the
+  `~/.config/statecrafting/infra/hetzner/.env`) is validated against the
   catalog: missing required keys and unknown keys both fail.
 - **Cluster secrets** are SOPS-encrypted YAML under `infra/secrets/`,
   committed, and decrypted in-cluster by Flux. The `age` private key is
@@ -123,7 +123,7 @@ no cluster today; they are RS256 PEMs produced by `npm run generate-keys`, which
 writes them into a gitignored `keys/` that is deliberately absent from images.
 Spec 009 cannot satisfy "a real login completes" without them. They are
 generated once, written into
-`~/.config/stagecraft-ing/infra/hetzner/.env` alongside every other operator
+`~/.config/statecrafting/infra/hetzner/.env` alongside every other operator
 secret, declared in the catalog, and delivered to the cluster through SOPS like
 the rest. The operator `.env` is therefore the origin of record for key material,
 and the catalog is what makes that origin explicit rather than folkloric.
@@ -182,7 +182,7 @@ OAP `stagecraft` database dies with it, intentionally and without export
 ## 4. Acceptance
 
 - A cluster whose nodes are named `stagecraft-hetzner-*` is Ready, and its
-  kubeconfig is the one at `~/.config/stagecraft-ing/infra/hetzner/`.
+  kubeconfig is the one at `~/.config/statecrafting/infra/hetzner/`.
 - Flux reconciles it from this repository; no object on the cluster
   references `open-agentic-platform`.
 - `infra/secrets/catalog.toml` generates `.env.example`, validates a real

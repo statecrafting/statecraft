@@ -139,7 +139,7 @@ full:
   and the progress view (`/stamps/:jobId`) polled every 2s, advancing the
   stepper live queued -> stamping -> pushing -> verifying -> (terminal).
   The factory really cloned the pinned template, stamped, created the
-  private repo `stagecraft-ing/july-15-stampcheck`, minted a born-with
+  private repo `statecrafting/july-15-stampcheck`, minted a born-with
   cert, triggered the repo's born-green CI, and the UI rendered the honest
   terminal state. The stamp finished `failed` because the stamped repo's
   born-green CI did not pass (`npm --prefix frontend-react ci` -> EUSAGE:

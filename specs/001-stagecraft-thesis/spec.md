@@ -1,5 +1,5 @@
 ---
-id: "001-stagecraft-thesis"
+id: "001-statecraft-thesis"
 title: "Stagecraft: the governed agentic delivery control plane"
 status: approved
 created: "2026-07-14"
@@ -42,7 +42,7 @@ migrated wholesale. The consolidation decision is dated 2026-07-14.
 
 | Predecessor | Fate here |
 |---|---|
-| `platform/services/stagecraft` (Encore.ts SaaS, OAP) | Rebuilt as the control plane services on the EnRaHiTu substrate |
+| `platform/services/statecraft` (Encore.ts SaaS, OAP) | Rebuilt as the control plane services on the EnRaHiTu substrate |
 | `deployd-api-rs` (axum + hiqlite K8s orchestrator, OAP) | Orchestration core becomes `addon/fleet-native` (napi-rs, in-process); the axum HTTP layer disappears |
 | `factory-encore` (repo stamping) | Absorbed as the `factory/` service, consuming enrahitu's versioned template contract (enrahitu spec 009) |
 | OPC (Tauri desktop cockpit, OAP) | Retired as a desktop app; governance verbs move to the stagecraft-cli repo (CLI + MCP server) |

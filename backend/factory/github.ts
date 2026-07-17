@@ -37,7 +37,7 @@ async function gh<T>(path: string, opts: GhOptions): Promise<T> {
       Authorization: `Bearer ${opts.token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": GITHUB_API_VERSION,
-      "User-Agent": "stagecraft-factory",
+      "User-Agent": "statecraft-factory",
       ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
     },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,

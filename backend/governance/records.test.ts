@@ -16,7 +16,7 @@ import { gate } from "./gate";
 import { list, record, verify } from "./records";
 
 beforeAll(() => {
-  process.env.STAGECRAFT_GOVERNANCE_STATE_DIR = mkdtempSync(
+  process.env.statecraft_GOVERNANCE_STATE_DIR = mkdtempSync(
     join(tmpdir(), "gov-svc-"),
   );
 });

@@ -1,5 +1,5 @@
 /**
- * Thin typed client over the stagecraft control-plane API (spec 007).
+ * Thin typed client over the statecraft control-plane API (spec 007).
  *
  * Auth rides httpOnly cookies, so every request is plain fetch with
  * same-origin credentials; nothing token-like is ever visible to this code.
