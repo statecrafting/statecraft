@@ -18,7 +18,7 @@ const fixture = () => JSON.parse(readFileSync(fixturePath, "utf8"));
 
 // Golden hash (spec 012 §4/§6): the platform ledger anchors these same bytes,
 // so a change here is a deliberate break, not a refresh.
-const GOLDEN_SHA256 = "ad33056eec7e00f954da905b19062a7f0d8d559dc1e574fffda0929e570feb5b";
+const GOLDEN_SHA256 = "f3c34ae79e000bb4e2ef6ea850186db57cd5c2338d6885270a66bd7b76b97da9";
 
 // Independent recursive key-sort + sha256, computed in the test with no shared
 // code with the validator, to cross-check the printed hash.

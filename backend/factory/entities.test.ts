@@ -55,7 +55,7 @@ for (const arm of arms) {
         tenantId: `t-${randomUUID()}`,
         installationId: "125344051",
         appName: "smoke-app",
-        org: "statecraft-ing",
+        org: "statecrafting",
         frontend: "react-rr7",
         pages: true,
         templateRef: "34134f9a48ddff75cca1df4f9a15e06140357bdd",

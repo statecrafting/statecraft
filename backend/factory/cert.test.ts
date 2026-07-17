@@ -11,7 +11,7 @@ import { CertError, buildCert, certHash } from "./cert";
  * (the template's own verifier) independently computes. Matching it proves the
  * factory's TS canonicalization is byte-identical to the verifier's.
  */
-const GOLDEN_SHA256 = "ad33056eec7e00f954da905b19062a7f0d8d559dc1e574fffda0929e570feb5b";
+const GOLDEN_SHA256 = "f3c34ae79e000bb4e2ef6ea850186db57cd5c2338d6885270a66bd7b76b97da9";
 
 const exampleCert = JSON.parse(
   readFileSync(join(process.cwd(), "scripts/fixtures/born-with.example.json"), "utf8"),
@@ -39,7 +39,7 @@ describe("certHash", () => {
 describe("buildCert", () => {
   const base = {
     appName: "smoke-app",
-    org: "statecraft-ing",
+    org: "statecrafting",
     templateName: "enrahitu",
     templateVersion: "0.1.0",
     contractVersion: "0.5.0",
@@ -51,7 +51,7 @@ describe("buildCert", () => {
   it("builds a schema-shaped cert with an explicit posture and defaulted:false", () => {
     const cert = buildCert({ ...base, posture: "assisted" });
     expect(cert.certVersion).toBe("1");
-    expect(cert.app).toEqual({ name: "smoke-app", org: "statecraft-ing" });
+    expect(cert.app).toEqual({ name: "smoke-app", org: "statecrafting" });
     expect(cert.template.commit).toBe(base.commit);
     expect(cert.agenticPostureBinding).toEqual({ posture: "assisted", defaulted: false });
     expect(cert.stampedBy).toEqual({ kind: "factory", id: "statecraft/factory@1" });

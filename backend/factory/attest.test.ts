@@ -17,7 +17,7 @@ describe("stamp attestation", () => {
   const base = {
     mode: "adopt" as const,
     appName: "chancery",
-    org: "statecraft-ing",
+    org: "statecrafting",
     templateCommit: "34134f9a48ddff75cca1df4f9a15e06140357bdd",
     contractVersion: "0.5.0",
     posture: "assisted" as const,
@@ -36,7 +36,7 @@ describe("stamp attestation", () => {
     expect(stampAttestationPayload(base)).toEqual({
       mode: "adopt",
       appName: "chancery",
-      org: "statecraft-ing",
+      org: "statecrafting",
       templateCommit: "34134f9a48ddff75cca1df4f9a15e06140357bdd",
       contractVersion: "0.5.0",
       posture: "assisted",

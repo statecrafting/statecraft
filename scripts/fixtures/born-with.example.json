@@ -1,6 +1,6 @@
 {
   "certVersion": "1",
-  "app": { "name": "example-app", "org": "statecraft-ing" },
+  "app": { "name": "example-app", "org": "statecrafting" },
   "template": {
     "name": "enrahitu",
     "version": "0.1.0",
