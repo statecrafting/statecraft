@@ -1,5 +1,5 @@
 # Stagecraft
-
+ 
 The governed agentic delivery control plane: intent becomes a governed
 spec, the factory stamps an application from the
 [EnRaHiTu template](https://github.com/statecrafting/enrahitu), the fleet
