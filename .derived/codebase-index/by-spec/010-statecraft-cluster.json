@@ -1,22 +1,21 @@
 {
-  "diagnostics": {
-    "errors": [],
-    "warnings": [
-      {
-        "code": "W-001",
-        "message": "spec '010-statecraft-cluster' directory unit 'infra/' is not a directory",
-        "path": "infra/"
-      }
-    ]
-  },
   "mapping": {
     "dependsOn": [
       "001-statecraft-thesis"
     ],
-    "implementingPaths": [],
+    "implementingPaths": [
+      {
+        "path": "infra/",
+        "source": "spec-edge"
+      }
+    ],
     "resolvedUnits": [
       {
-        "locations": [],
+        "locations": [
+          {
+            "file": "infra/"
+          }
+        ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
@@ -29,5 +28,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "6a9397c8c22114c7addc7e5c51813a7df661eef00a567ee99aa83c054f76806a"
+  "shardHash": "e22f196758bfe661ac5952923bf1499160c2f3f83bb92f0fc37defd93652305a"
 }

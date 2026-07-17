@@ -3,22 +3,23 @@ id: "010-statecraft-cluster"
 title: "The statecraft cluster: Flux GitOps, SOPS secrets, platform services"
 status: approved
 created: "2026-07-16"
-implementation: pending
+implementation: in-progress
 depends_on:
   - "001-statecraft-thesis"
 establishes:
   - { kind: directory, path: "infra/" }
 summary: >
-  statecraft does not own the cluster it runs on: the nodes are named for
-  OAP, and Flux reconciles this cluster from the open-agentic-platform
-  repository. Build a statecraft-owned hetzner-k3s cluster alongside the
-  existing one, reconciled by Flux from a statecraft-owned GitOps tree,
-  with one documented secret source that generates both the local-dev
-  `.env` and the SOPS-encrypted cluster secrets Flux decrypts in-cluster.
-  Stand up the platform services (cert-manager, ingress-nginx, rauthy,
-  Postgres, NSQ, minio, prometheus/grafana), cut DNS when proven, then
-  delete the old cluster. Blue-green at the cluster level: rollback is a
-  DNS change.
+  statecraft did not own the cluster it ran on: the nodes were named for
+  OAP and Flux reconciled it from the open-agentic-platform repository.
+  Build a statecraft-owned hetzner-k3s cluster reconciled by Flux from a
+  statecraft-owned in-repo GitOps tree, with one documented secret source
+  that generates both the local-dev `.env` and the SOPS-encrypted cluster
+  secrets Flux decrypts in-cluster. Stand up the platform services
+  (cert-manager, ingress-nginx, rauthy, Postgres, NSQ, prometheus/grafana);
+  object storage is Hetzner Object Storage, not an in-cluster service. The
+  old cluster was torn down first (2026-07-17), because it was not worth
+  keeping as a fallback, so this is a greenfield build: DNS points at the
+  new cluster once it serves, and there is no blue-green rollback target.
 ---
 
 # 010: The statecraft cluster
@@ -46,12 +47,26 @@ different product's repository is not a rot emergency (the source repo is
 alive), but it is a correctness and ownership defect, and it blocks the
 explicit, documented infrastructure this spec exists to establish.
 
-**Blue-green at the cluster level, not in place.** There are no live fleet
-apps to migrate (verified 2026-07-16: no app namespaces exist; spec 006's
-live E2E ended with its own remove step), so the only cost of building
-alongside is a few days of double spend, and rollback is a DNS change rather
-than a restore. Migrating a live cluster's GitOps source is painful;
-starting clean is not.
+**Greenfield, not in place.** There are no live fleet apps to migrate
+(verified 2026-07-16: no app namespaces exist; spec 006's live E2E ended
+with its own remove step). Migrating a live cluster's GitOps source is
+painful; starting clean is not.
+
+**Status note (2026-07-17).** Three decisions refined this spec after it was
+written:
+
+1. A brief attempt to *reuse* the existing cluster in place (rename OAP to
+   statecraft, swap Flux's source live) was tried and reverted: it inverts
+   almost every clause here, keeps the OAP node identity and etcd, and gives
+   up the "born clean" half of the thesis. Back to build-new.
+2. The old cluster was **torn down first** rather than kept as a blue-green
+   fallback, because the operator judged it not worth keeping. The original
+   plan's "delete old last, after new is proven" sequencing is therefore
+   moot, and there is no rollback cluster. Teardown is done (see §3).
+3. In-cluster **minio is dropped** for Hetzner Object Storage (see Platform
+   services). This is the design change that most affects the secret catalog.
+
+The greenfield build proceeds from a verified-empty Hetzner project.
 
 ## 2. Territory
 
@@ -144,8 +159,21 @@ Reconciled as Flux HelmReleases from `infra/gitops/`:
   `https://encore.dev/schemas/infra.schema.json`). NSQ is therefore the
   only self-hostable choice, and `nsqd` on the old cluster was Encore's
   backend rather than OAP cruft.
-- **minio**, backing Encore's `object_storage`.
 - **prometheus + grafana**, backing Encore's `metrics`.
+
+**Object storage is Hetzner Object Storage, not an in-cluster service**
+(decided 2026-07-17). The old cluster ran an in-cluster minio; it is
+dropped. Encore's `object_storage` uses the `s3` backend pointed at the
+`statecraft-encore-object-storage` bucket, addressed by
+`OBJECT_STORAGE_S3_ACCESS_KEY_ID` / `OBJECT_STORAGE_S3_SECRET_ACCESS_KEY`
+in the catalog; rauthy backups (`RAUTHY_S3_*`) and the fleet's restic
+backups (`FLEET_S3_*`) already target Hetzner Object Storage buckets.
+Dropping minio removes a stateful pod, a 20 GB volume, and `MINIO_ROOT_*`
+from the secret surface. The rationale: with a managed S3 already in the
+picture, a self-hosted one was pure redundancy, and block storage is
+better reserved for workloads that genuinely need it (Postgres, the fleet's
+per-app volumes, prometheus). Nothing pointed at the in-cluster minio, so
+the drop is clean.
 
 ### Rauthy: rebuild, do not migrate
 
@@ -163,21 +191,28 @@ seeded from the catalog, not migrated. Reuse `RAUTHY_ENC_KEY` and
 
 ### Cutover
 
-The new cluster proves itself before anything moves. DNS records to repoint:
-`auth`, `deploy`, `grafana`, `minio`, and (once spec 009 lands) `app`, all
-under `statecraft.ing`, plus the fleet's `deployd.xyz`. Note that `auth` is
-Cloudflare-proxied today while `app` is a direct A record to the worker, so
-the records are not uniform and each is checked individually. The apex
-`statecraft.ing` stays GitHub Pages and is not touched.
+DNS records to point at the new cluster once it serves: `auth`, `deploy`,
+`grafana`, and (once spec 009 lands) `app`, all under `statecraft.ing`, plus
+the fleet's `deployd.xyz`. Note that `auth` is Cloudflare-proxied while `app`
+is a direct A record to the worker, so the records are not uniform and each
+is checked individually. The apex `statecraft.ing` stays GitHub Pages and is
+not touched.
 
-Rollback is repointing DNS at the old cluster, which stays running and
-untouched until the new one is proven.
+The old cluster was torn down first (2026-07-17), so there is **no
+blue-green rollback target**: this is a greenfield build. Until the new
+cluster serves and DNS is pointed at it, the hosts are simply down. That is
+an accepted consequence of the operator's decision that the old cluster was
+not worth keeping; the mitigation is to bring the new cluster up and verified
+before pointing DNS, not to keep a fallback.
 
 ### Teardown
 
-Only after the new cluster serves every host: delete the old cluster. The
-OAP `statecraft` database dies with it, intentionally and without export
-(decided 2026-07-16). Nothing else on it is load-bearing.
+Already done: the old cluster was deleted 2026-07-17 (2 servers, 7 CSI
+volumes, network, firewall, ssh-key, primary IPs; Hetzner project verified
+empty). The OAP `statecraft` database died with it, intentionally and without
+export. External Hetzner Object Storage buckets are a separate service and
+were preserved. (A brief reuse-in-place attempt on 2026-07-17 was reverted
+to this build-new plan before any cluster state was changed by it.)
 
 ## 4. Acceptance
 
@@ -192,10 +227,13 @@ OAP `statecraft` database dies with it, intentionally and without export
   admin login completes, and the seeded OIDC clients match the catalog.
 - cert-manager issues real certs for every host via the DNS-01 issuer; no
   host serves the ingress default certificate.
+- Encore's `object_storage` reads and writes the
+  `statecraft-encore-object-storage` Hetzner bucket; no in-cluster minio
+  exists.
 - The fleet (spec 006) places an app on the new cluster and its live verbs
   still pass, proving the cluster is a valid fleet target.
-- DNS is cut, every host serves from the new cluster, and the old cluster is
-  deleted.
+- DNS is pointed at the new cluster and every host serves from it. (The old
+  cluster is already deleted; there is nothing left to tear down.)
 
 ## 5. Out of scope
 
