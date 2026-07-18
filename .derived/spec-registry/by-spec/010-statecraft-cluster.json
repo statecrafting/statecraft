@@ -32,6 +32,6 @@
     "summary": "statecraft did not own the cluster it ran on: the nodes were named for OAP and Flux reconciled it from the open-agentic-platform repository. Build a statecraft-owned hetzner-k3s cluster reconciled by Flux from a statecraft-owned in-repo GitOps tree, with one documented secret source that generates both the local-dev `.env` and the SOPS-encrypted cluster secrets Flux decrypts in-cluster. Stand up the platform services (cert-manager, ingress-nginx, rauthy, Postgres, NSQ, prometheus/grafana); object storage is Hetzner Object Storage, not an in-cluster service. The old cluster was torn down first (2026-07-17), because it was not worth keeping as a fallback, so this is a greenfield build: DNS points at the new cluster once it serves, and there is no blue-green rollback target.\n",
     "title": "The statecraft cluster: Flux GitOps, SOPS secrets, platform services"
   },
-  "shardHash": "6ed82be05349161100752fa939cd6c3a96ed21fe0359d90641b324eebde5db7f",
+  "shardHash": "4338175556ff23e3ee85fd122db4ecffe4e0eee7db12defeabf21bfbeb9d6f8a",
   "specVersion": "1.1.0"
 }

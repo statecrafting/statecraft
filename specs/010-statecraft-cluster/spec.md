@@ -68,6 +68,55 @@ written:
 
 The greenfield build proceeds from a verified-empty Hetzner project.
 
+**Live bring-up note (2026-07-18).** The platform layer was built and brought
+up live. What is done:
+
+- The in-repo half: `infra/secrets/catalog.toml` + a dependency-free generator
+  (`infra/secrets/catalog.ts`) producing `infra/hetzner/.env.example` and
+  validating the operator `.env`; the `infra/gitops/clusters/statecraft-hetzner`
+  Flux tree (four tiers with `dependsOn`); five SOPS-encrypted secrets.
+- Flux was bootstrapped (`flux bootstrap github`, deploy-key path) against the
+  `feat/010-platform-layer` branch. All four tiers reconcile Ready. The five
+  SOPS secrets **materialize in-cluster from ciphertext in git** (the acceptance
+  the OAP reference never actually met). cert-manager, ingress-nginx, reflector,
+  rauthy, Postgres, NSQ, and kube-prometheus-stack (Prometheus + Grafana) are
+  all healthy. `rauthy` reports `db_healthy: true`.
+- Certs issue via the **DNS-01 Cloudflare** ClusterIssuer (rauthy-tls,
+  grafana-tls), which is why they issued before DNS cutover. No object on the
+  cluster references `open-agentic-platform` (zero-hit grep verified).
+- DNS: `auth.statecraft.ing` (Cloudflare-proxied) and `grafana.statecraft.ing`
+  (direct) were created pointing at the worker node and both serve over a valid
+  cert. These records did not previously exist (they died with the old cluster),
+  so the cutover was additive.
+
+Two operational facts that the hetzner-k3s `cluster.yaml` schema does not
+express, recorded here as design truth:
+
+- **The Hetzner firewall must allow inbound TCP 80/443.** hetzner-k3s creates a
+  firewall with SSH/API/NodePort rules only; the ingress-nginx hostPort is
+  unreachable until 80/443 are opened. Added live via `hcloud firewall
+  add-rule`; re-running `hetzner-k3s create` may reset the firewall and need
+  them re-added. Not expressible in `cluster.yaml`; it is an operator step.
+- **ingress-nginx runs only on the worker.** The DaemonSet does not tolerate the
+  control-plane taint, so only the worker serves 80/443; DNS points at the
+  worker IP.
+
+What remains (keeps this spec `in-progress`):
+
+- **Operator admin login** to rauthy (browser, session-based; not scripted).
+- **OIDC client seeding.** rauthy is fresh, so the catalog's client
+  ids/secrets (from the old rauthy) are not yet realized in it. Grafana's OIDC
+  login and the app clients (`OIDC_SPA`, `OIDC_M2M`, `RAUTHY_CLIENT`) need
+  seeding; the app clients are spec 009's concern (its chart runs the seeder).
+- **object_storage read/write** against the Hetzner bucket needs the Encore app
+  (spec 009); only "no in-cluster minio" is verifiable now (it holds).
+- **Fleet E2E** (spec 006 places an app): blocked on the same items the spec 006
+  live run flagged (an amd64 enrahitu image, pull-secret provisioning).
+- **`deploy.` / `app.` DNS**: their services (deployd-api, the control plane)
+  are not deployed here, so those records are deferred to specs 006 / 009.
+- **Repoint Flux from `feat/010-platform-layer` to `main`** after the PR merges
+  (patch the `flux-system` GitRepository `spec.ref.branch`).
+
 ## 2. Territory
 
 - `infra/`: everything infrastructure, owned by this spec.
