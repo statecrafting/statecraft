@@ -88,10 +88,19 @@ kustomizations make that a non-issue. The alternative (a standalone
 `statecraft-gitops` repo) buys separation but puts the cluster's definition
 outside the governance this product sells, which is the wrong trade here.
 
-**Cross-spec touches at implementation.** `.env.example` and
-`infra.config.json` are spec 002 territory; the secret catalog generates the
-former and must agree with the latter. Wiring a generator invocation into
-`package.json` is likewise a 002 touch. These land with a `Spec-Drift-Waiver:`
+**Cross-spec touches at implementation.** The catalog documents the operator
+and cluster secret surface (the `.env` at
+`~/.config/statecrafting/infra/hetzner/`). It generates its own committed
+example, `infra/hetzner/.env.example` (this spec's territory, beside
+`cluster.yaml`), rather than the root `.env.example`: the root file is spec
+002's local-dev ledger doc, a developer running `npm run dev` sets none of the
+operator secrets, so folding the full cluster surface into the root example
+would be a regression, and the reference cluster kept the two separate. The
+catalog must *agree with* (not rewrite) two spec 002 artifacts:
+`infra.config.json` (every secret Encore injects must be declared in the
+catalog) and the root `.env.example`. Agreement is a validation the generator
+enforces, not an authoring edit. The one genuine 002 touch is wiring the
+generator scripts into `package.json`, which lands with a `Spec-Drift-Waiver:`
 or a coordinated 002 edit, not by silently widening this spec's territory.
 
 ## 3. Behavior
@@ -145,21 +154,28 @@ and the catalog is what makes that origin explicit rather than folkloric.
 
 ### Platform services
 
-Reconciled as Flux HelmReleases from `infra/gitops/`:
+Reconciled by Flux from `infra/gitops/`. Most are HelmReleases; Postgres and
+NSQ are raw manifests (still Flux-reconciled), because NSQ has no maintained
+chart and a single born-empty Postgres on the official image sidesteps the
+Bitnami catalog changes (mid-2025) that leave the old `bitnami/postgresql`
+tags in `ImagePullBackOff`:
 
-- **cert-manager**, with both ClusterIssuers (`letsencrypt-prod` and
-  `letsencrypt-prod-dns01-cloudflare`); the DNS-01 solver uses
-  `CLOUDFLARE_DNS_API_TOKEN` from the catalog.
-- **ingress-nginx**, **reflector**.
-- **rauthy** at `auth.<domain>`, fresh (see below).
-- **Postgres**, born empty. Postgres stays as the CoreLedger driver target
-  (spec 003); only OAP's data is discarded.
-- **NSQ**. Encore's self-host infra schema supports exactly three pub/sub
-  backends (`gcp_pubsub`, `aws_sns_sqs`, `nsq`; verified 2026-07-16 against
-  `https://encore.dev/schemas/infra.schema.json`). NSQ is therefore the
-  only self-hostable choice, and `nsqd` on the old cluster was Encore's
-  backend rather than OAP cruft.
-- **prometheus + grafana**, backing Encore's `metrics`.
+- **cert-manager** (HelmRelease), with both ClusterIssuers (`letsencrypt-prod`
+  and `letsencrypt-prod-dns01-cloudflare`); the DNS-01 solver uses
+  `CLOUDFLARE_DNS_API_TOKEN` from the catalog. Per Acceptance, the DNS-01
+  issuer is the default every platform host uses, so certs issue before DNS is
+  cut over (HTTP-01 cannot solve an unreachable host on a greenfield cluster).
+- **ingress-nginx**, **reflector** (HelmReleases).
+- **rauthy** at `auth.<domain>`, fresh (see below); the in-tree vendored chart.
+- **Postgres** (raw StatefulSet, `postgres:17`), born empty. Postgres stays as
+  the CoreLedger driver target (spec 003); only OAP's data is discarded.
+- **NSQ** (raw manifest). Encore's self-host infra schema supports exactly
+  three pub/sub backends (`gcp_pubsub`, `aws_sns_sqs`, `nsq`; verified
+  2026-07-16 against `https://encore.dev/schemas/infra.schema.json`). NSQ is
+  therefore the only self-hostable choice, and `nsqd` on the old cluster was
+  Encore's backend rather than OAP cruft.
+- **prometheus + grafana** (kube-prometheus-stack HelmRelease), backing
+  Encore's `metrics`.
 
 **Object storage is Hetzner Object Storage, not an in-cluster service**
 (decided 2026-07-17). The old cluster ran an in-cluster minio; it is

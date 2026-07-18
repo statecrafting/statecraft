@@ -13,6 +13,11 @@ target/
 .env.*
 !.env.example
 keys/
+# SOPS age private keys never enter the repo (they live under ~/.config);
+# ignore them defensively. Encrypted *.sops.yaml and the public recipient
+# are committed.
+*.agekey
+age.agekey
 *.pem
 
 # macOS
