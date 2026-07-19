@@ -43,7 +43,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             addon/governance-native/package-lock.json
-            webapp/package-lock.json
+            frontend/package-lock.json
       - name: Cache cargo (governance-native addon)
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -55,7 +55,7 @@ jobs:
           restore-keys: |
             cargo-${{ runner.os }}-
       - run: npm ci
-      - run: npm --prefix webapp ci
+      - run: npm --prefix frontend ci
       - name: Build governance-native addon
         run: npm run build:addon
       - name: Build web (SPA into backend/web/dist)
@@ -66,5 +66,5 @@ jobs:
         env:
           TEST_POSTGRES_URL: postgres://statecraft:statecraft@localhost:5432/statecraft_test
         run: npm run typecheck && npm test
-      - name: Webapp typecheck + component tests (spec 007)
-        run: npm --prefix webapp run typecheck && npm --prefix webapp test
+      - name: Frontend typecheck + component tests (spec 007)
+        run: npm --prefix frontend run typecheck && npm --prefix frontend test

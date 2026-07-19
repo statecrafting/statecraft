@@ -1,11 +1,11 @@
 {
   "package": {
     "kind": "npm-package",
-    "name": "@statecraft/webapp",
-    "path": "webapp",
+    "name": "@statecraft/frontend",
+    "path": "frontend",
     "specRef": "007-governance-webapp",
     "version": "0.1.0"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "69cbd158520c29eb093b7da347561e90042492f5483565c26deb375557db7607"
+  "shardHash": "0c4415aa477fe252667f26b8e30d5ee488bff7554486d91ef8291823ebaf3b1a"
 }

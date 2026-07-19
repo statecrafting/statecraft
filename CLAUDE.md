@@ -23,7 +23,7 @@ standards/   spec-spine constitution, contract, templates
 ```
 
 Planned service directories (spec 001 §3): `addon/`, `core/`, `auth/`,
-`idp/`, `tenants/`, `factory/`, `fleet/`, `webapp/`.
+`idp/`, `tenants/`, `factory/`, `fleet/`, `frontend/`.
 
 ## Governance
 

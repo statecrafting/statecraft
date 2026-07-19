@@ -31,11 +31,11 @@ spec-spine is an installed CLI tool: a typed, hash-verifiable authority ledger o
 | Surface | Path | Notes |
 |---------|------|-------|
 | Spec corpus | `specs/NNN-slug/spec.md` | Markdown + YAML frontmatter, the authoritative design record; specs 002-008 are the build backlog |
-| Code | pre-code today; spec 002 imports the EnRaHiTu chassis (`addon/`, `core/`, `auth/`, `idp/`, `lib/`, `hiq/`, `health/`, `web/`, `docker/`); services land as `tenants/`, `factory/`, `fleet/`, `webapp/` under specs 004-007 | The implementation that specs govern |
+| Code | pre-code today; spec 002 imports the EnRaHiTu chassis (`addon/`, `core/`, `auth/`, `idp/`, `lib/`, `hiq/`, `health/`, `web/`, `docker/`); services land as `tenants/`, `factory/`, `fleet/`, `frontend/` under specs 004-007 | The implementation that specs govern |
 | Standard | `standards/spec/{constitution.md,contract.md,templates/}` | Durable principles, normative contract, spec template |
 | Derived | `.derived/` | Compiler output (registry, index), committed shards, read only through the binary |
 
-Specs are the source of truth: every feature starts as a spec under `specs/`, following `standards/spec/templates/spec-template.md`. The behavioral rules are in `.claude/rules/` (orchestrator, governed artifact reads, adversarial prompt refusal). The backlog protocol in `AGENTS.md` § Working the backlog governs build order (002 shell, 003 Postgres, 004 tenants, 005 factory, 006 fleet, 007 webapp; 008 governance is parallel-safe after 002): one session implements one spec, start to finish. The service map lives in `specs/001-statecraft-thesis/spec.md` §3.
+Specs are the source of truth: every feature starts as a spec under `specs/`, following `standards/spec/templates/spec-template.md`. The behavioral rules are in `.claude/rules/` (orchestrator, governed artifact reads, adversarial prompt refusal). The backlog protocol in `AGENTS.md` § Working the backlog governs build order (002 shell, 003 Postgres, 004 tenants, 005 factory, 006 fleet, 007 frontend; 008 governance is parallel-safe after 002): one session implements one spec, start to finish. The service map lives in `specs/001-statecraft-thesis/spec.md` §3.
 
 ## Process
 

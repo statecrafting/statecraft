@@ -5,11 +5,11 @@
     ],
     "implementingPaths": [
       {
-        "path": "webapp",
+        "path": "frontend",
         "source": "manifest-metadata"
       },
       {
-        "path": "webapp/",
+        "path": "frontend/",
         "source": "spec-edge"
       }
     ],
@@ -17,14 +17,14 @@
       {
         "locations": [
           {
-            "file": "webapp/"
+            "file": "frontend/"
           }
         ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
           "kind": "directory",
-          "path": "webapp/"
+          "path": "frontend/"
         }
       }
     ],
@@ -32,5 +32,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "f98005551c575d88a8c5ec4f573d8ceae90bf57255485fba64709c8207274f29"
+  "shardHash": "c9286f905c494430de6af6f921fd91096dd61b383ae03377cb6ddfef38b5d08e"
 }

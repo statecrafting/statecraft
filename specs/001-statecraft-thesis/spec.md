@@ -63,7 +63,7 @@ operation sold to customers is rehearsed on the platform itself first.
   scaling thesis is validated on ourselves. The hermetic
   one-container-one-volume claim belongs to stamped apps; the control
   plane is allowed to be a platform-grade K8s deployment.
-- **Governance UI in the webapp slot**, built with Vite + React Router
+- **Governance UI in the frontend slot**, built with Vite + React Router
   v7 (the platform is not a template; it owes nothing to template
   frontend flavors).
 - **Fleet v1 targets the existing hetzner-k3s cluster** via the deployd
@@ -80,7 +80,7 @@ auth/ idp/ the EnRaHiTu auth baseline, platform-tenant flavored
 tenants/   GitHub App installations, workspaces, invites
 factory/   stamping service; reads template.toml (enrahitu spec 009) and nothing else
 fleet/     deploy / update / backup orchestration over fleet-native
-webapp/    governance UI (Vite + React Router v7)
+frontend/  governance UI (Vite + React Router v7)
 ```
 
 Each service graduates into its own numbered spec when its build starts;

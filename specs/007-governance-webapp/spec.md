@@ -3,15 +3,15 @@ id: "007-governance-webapp"
 title: "Governance UI: Vite + React Router v7 webapp"
 status: approved
 created: "2026-07-14"
-implementation: in-progress
+implementation: complete
 depends_on:
   - "004-tenants-github-app"
 establishes:
-  - { kind: directory, path: "webapp/" }
-# The edge moves to `frontend/` WITH the code, in the same PR as the rename
-# (owned paths and this spec move together). It is not flipped early: this spec
-# is `in-progress`, so spec-spine enforces that a declared directory unit is a
-# real directory (I-007), and `frontend/` holds no tracked file until the move.
+  - { kind: directory, path: "frontend/" }
+# The SPA lives at `frontend/`, matching the enrahitu chassis convention. The
+# 2026-07-16 realignment moved it here from `webapp/` in one PR (owned paths and
+# this spec move together); spec 002's phantom `frontend/` edge was retired in
+# the same realignment. See the 2026-07-18 Update.
 summary: >
   Replaces the chassis's placeholder Vue SPA with the control plane's
   real face: a Vite + React Router v7 single-page app served by the
@@ -26,29 +26,29 @@ summary: >
 
 ## 1. Territory
 
-`webapp/` is re-established by this spec (the Vue placeholder from the
-chassis import, spec 002, is deleted). New package name
-`@statecraft/webapp`, spec-spine manifest key -> this spec. Keep the
-build contract identical: `npm --prefix webapp run build` emits into
-`backend/web/dist` (the path the chassis web static service serves);
-that static service is untouched.
+`frontend/` is this spec's territory (the Vue placeholder from the
+chassis import, spec 002, is deleted). Package name
+`@statecraft/frontend`, matching the enrahitu chassis (`@enrahitu/frontend`);
+spec-spine manifest key -> this spec. Keep the build contract identical:
+`npm --prefix frontend run build` emits into `backend/web/dist` (the path
+the chassis web static service serves); that static service is untouched.
 
-The `frontend/` -> `webapp/` rename also disturbs governance-owned build
+The `webapp/` -> `frontend/` rename also disturbs governance-owned build
 and CI surfaces (spec 002, plus `spec-spine.toml`, which spec 000 owns),
 carried in this PR under a `Spec-Drift-Waiver:` (007 supersedes the 002
 placeholder; those owning specs are not amended to ratify a rename they
 did not author):
 
 - the root configs repoint their SPA-directory reference from
-  `frontend` to `webapp`: `package.json` (`dev:web` / `build:web`
+  `webapp` to `frontend`: `package.json` (`dev:web` / `build:web`
   scripts), `tsconfig.json` (the `exclude` entry that keeps the SPA out
-  of the backend `tsc`), and `vitest.config.ts` (the test `exclude`
-  glob).
-- `.github/workflows/verify.yml`: the frontend cache path and the
-  `npm --prefix frontend ci` step repoint to `webapp`, and a `webapp`
-  component-test step is added (§3).
-- `spec-spine.toml`: `standalone_npm_packages` swaps `frontend` for
-  `webapp`.
+  of the backend `tsc`), `vitest.config.ts` (the test `exclude` glob),
+  `.dockerignore`, and `.gitignore`.
+- `.github/workflows/verify.yml` and `image.yml`: the SPA cache path and
+  the `npm --prefix frontend ci` steps, plus the `frontend`
+  component-test step (§3).
+- `spec-spine.toml`: `standalone_npm_packages` swaps `webapp` for
+  `frontend`.
 
 ## 2. Behavior
 
@@ -80,13 +80,13 @@ did not author):
 
 ## 3. Acceptance
 
-- `npm --prefix webapp run build` emits web/dist; `npm run dev` serves
+- `npm --prefix frontend run build` emits web/dist; `npm run dev` serves
   the SPA; login (mock driver) -> create tenant -> tenant detail works
   against a locally running control plane.
 - With spec 005 present: launching a stamp shows live job progression.
 - vitest component tests for the auth loader redirect and one route
   module; the chassis suite stays green.
-- Spine gates green (webapp package repointed in spec-spine.toml if
+- Spine gates green (frontend package repointed in spec-spine.toml if
   the standalone list names change).
 
 ## 4. Out of scope
@@ -201,3 +201,28 @@ this is a pure move with no behavior change): no `webapp` reference survives
 outside git history; `frontend/` is this spec's territory and 002 no longer
 claims it; typecheck, vitest, the SPA build into `backend/web/dist`, and the
 image build are all green; spine gates and `couple` pass.
+
+### Update 2026-07-18 (`webapp/` -> `frontend/` landed; `implementation: complete`)
+
+The realignment is done. `git mv webapp frontend` moved all 23 tracked files;
+the `frontend/node_modules` husk was deleted in the same commit (the trap in the
+2026-07-16 note), the package was renamed `@statecraft/webapp` ->
+`@statecraft/frontend` (mirroring `@enrahitu/frontend`), and every SPA-directory
+reference was repointed: `package.json`, `tsconfig.json`, `vitest.config.ts`,
+`.dockerignore`, `.gitignore`, both CI workflows (`verify.yml`, `image.yml`),
+and `spec-spine.toml` (`standalone_npm_packages`, spec 000 territory, under the
+PR's `Spec-Drift-Waiver:`), plus the service-map prose in specs 001/004/009,
+`README.md`, `CLAUDE.md`, and `AGENTS.md`. Spec 002's phantom `frontend/` edge
+was already retired (its 2026-07-16 note), so this spec picks the path up
+cleanly and now `establishes` `frontend/`.
+
+The 2026-07-16 acceptance holds: no *live* `webapp` reference survives in code,
+configuration, or the service-map docs. The only remaining `webapp` tokens are
+in this spec's and spec 002's dated history logs and in git history, which are
+the record of the rename rather than live references, and in the spec id
+`007-governance-webapp` itself (the manifest key, unchanged). `frontend/` is
+this spec's territory and 002 no longer claims it; the spine gates (compile,
+index check, lint, couple with the waiver) pass, and the chassis `verify` gates
+(root typecheck + vitest, the frontend typecheck + component tests, the SPA
+build into `backend/web/dist`, and the image build) are green. Flipped to
+`implementation: complete`.

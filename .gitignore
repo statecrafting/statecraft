@@ -55,7 +55,7 @@ encore.gen/
 encore.gen.go
 encore.gen.cue
 
-# Built SPA bundle: webapp/ builds into backend/web/dist. The `dist` rule
+# Built SPA bundle: frontend/ builds into backend/web/dist. The `dist` rule
 # above excludes that directory wholesale, so re-include the directory itself
 # and the dev placeholder; real hashed builds (npm run build:web) stay ignored.
 !backend/web/dist/

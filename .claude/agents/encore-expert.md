@@ -92,7 +92,7 @@ coupling gate:
 - **Secrets** via lib/secrets `secret("NAME")`; never raw `process.env` for
   secret material. Local dev fallback is keys/ from `npm run generate-keys`.
 - **ESM only, TypeScript strict, single npm package at the root** (addon/ and
-  webapp/ are standalone manifests; no npm workspaces).
+  frontend/ are standalone manifests; no npm workspaces).
 - **The factory consumes `template.toml` and nothing else** (enrahitu spec
   009); never reach into template internals from factory code.
 - **Governance**: every substantive change binds to a spec; owned paths and
@@ -111,7 +111,7 @@ later fleet-native).
 Control plane (specs 004-007): `tenants/` (GitHub App installations,
 workspaces, invites), `factory/` (stamping; reads template.toml only),
 `fleet/` (deploy / update / backup orchestration over the fleet-native
-addon), `webapp/` (governance UI, Vite + React Router v7).
+addon), `frontend/` (governance UI, Vite + React Router v7).
 
 ## Output Format
 

@@ -22,7 +22,7 @@ git diff HEAD --stat                 # uncommitted delta
 ```
 
 Note which classes changed: source code (post-002: the chassis dirs and
-the services `tenants/`, `factory/`, `fleet/`, `webapp/`), specs
+the services `tenants/`, `factory/`, `fleet/`, `frontend/`), specs
 (`specs/**/spec.md`), schemas/standards (`standards/**`), docs (`*.md`),
 scripts/packaging, workflows (`.github/**`), agent kit (`.claude/**`).
 

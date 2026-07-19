@@ -34,23 +34,22 @@ This repo's backlog is its spec corpus: every spec with
 `implementation: pending` is a work order. One session implements one
 spec, start to finish.
 
-**Current build order (2026-07-16).** Specs 002 through 008 landed; their
+**Current build order (2026-07-18).** Specs 002 through 008 landed; their
 historical order (002 shell, 003 Postgres, 004 tenants, 005 factory, 006
-fleet, 007 webapp, 008 governance) is now only of archaeological interest.
-What remains:
+fleet, 007 frontend, 008 governance) is now only of archaeological interest.
+The 007 chassis realignment (the SPA `webapp/` -> `frontend/` move, retiring
+spec 002's phantom `frontend/` edge) has also landed. What remains:
 
-1. **007 chassis realignment** (small, parallel-safe, do it whenever): move
-   the SPA `webapp/` -> `frontend/` to match the enrahitu chassis
-   convention, and retire spec 002's phantom `frontend/` edge. Mechanical
-   but wide; see 007's 2026-07-16 status note for the blast radius. It is
-   independent of the cluster work, so it can land first as a quick win.
-2. **010 statecraft cluster** is the main line: the statecraft-owned
+1. **010 statecraft cluster** is the main line: the statecraft-owned
    hetzner-k3s cluster, Flux GitOps from the in-repo `infra/` tree, SOPS
-   secrets, and the platform services. Built alongside the existing
-   OAP-named cluster, DNS cut when proven, old cluster deleted after.
-3. **009 control plane deploy** resumes once 010 lands. Stage 1 (the
-   image) is done and cluster-independent; stage 2 (the deploy) is
-   re-scoped onto 010's cluster and is blocked until it exists.
+   secrets, and the platform services. The platform layer is live on the
+   statecraft-hetzner cluster with Flux reconciling from `main`; it stays
+   `in-progress` for acceptance gated on specs 009 (OIDC seeding,
+   object_storage) and 006 (fleet E2E), plus the operator admin-login step.
+2. **009 control plane deploy** resumes on 010's live cluster. Stage 1 (the
+   image) is done and cluster-independent; stage 2 (the deploy) targets the
+   cluster and absorbs the OIDC-seeding + object_storage items deferred
+   from 010.
 
 Note that 001 (the thesis) carries `implementation: pending` but is a
 record, not a work order; do not pick it up as one.

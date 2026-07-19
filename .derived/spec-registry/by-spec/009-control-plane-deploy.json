@@ -33,6 +33,6 @@
     "summary": "Give statecraft its own deployment story so the spec-governed control plane runs on the statecraft-owned cluster (spec 010) with no dependency on the open-agentic-platform (OAP) chart, CD, or secret set. Publish the single-container image to statecraft's own GHCR namespace (stage 1, done), then stand the control plane up on the 010 cluster as a platform-grade K8s deployment reachable at app.statecraft.ing, wired to the real Encore secret contract and seeded with its own rauthy client. Port the OAP CI tooling worth keeping (AI PR review + changelog, the PR gate pattern), adapted to be OAP-free.\n",
     "title": "Self-hosted control plane deployment (OAP-independent)"
   },
-  "shardHash": "9fb84797e0e2cd417e6ecfa6bb20d98a1e651774218745b65be8f28ba0a43779",
+  "shardHash": "abb88f57cf6b090fc05f74619b6b097f589b935f8b061e89404b69ea1681f43d",
   "specVersion": "1.1.0"
 }

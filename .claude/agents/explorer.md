@@ -31,11 +31,11 @@ spec-spine is an installed CLI tool that governs this repo's spec corpus. In thi
 | Surface | Path | Tech |
 |---------|------|------|
 | Spec corpus | `specs/NNN-slug/spec.md` | Markdown + YAML frontmatter; specs 002-008 are the build backlog |
-| Code | pre-code today; spec 002 imports the chassis dirs (`addon/`, `core/`, `auth/`, `idp/`, `lib/`, `hiq/`, `health/`, `web/`, `docker/`); the control-plane services land as `tenants/`, `factory/`, `fleet/`, `webapp/` (governance UI) | The implementation governed by specs |
+| Code | pre-code today; spec 002 imports the chassis dirs (`addon/`, `core/`, `auth/`, `idp/`, `lib/`, `hiq/`, `health/`, `web/`, `docker/`); the control-plane services land as `tenants/`, `factory/`, `fleet/`, `frontend/` (governance UI) | The implementation governed by specs |
 | Standard | `standards/spec/{constitution.md,contract.md,templates/}` | Principles, contract, templates |
 | Derived | `.derived/` | Compiler output (registry, index), committed shards |
 
-Key files: `CLAUDE.md` (conventions), `AGENTS.md` (session + backlog protocol), `.claude/rules/` (behavioral rules), `specs/001-statecraft-thesis/spec.md` §3 (the service map: tenants, factory, fleet, webapp, governance). While the repo is pre-code, "how does X work?" questions resolve against the spec corpus, not source.
+Key files: `CLAUDE.md` (conventions), `AGENTS.md` (session + backlog protocol), `.claude/rules/` (behavioral rules), `specs/001-statecraft-thesis/spec.md` §3 (the service map: tenants, factory, fleet, frontend, governance). While the repo is pre-code, "how does X work?" questions resolve against the spec corpus, not source.
 
 ## Process
 

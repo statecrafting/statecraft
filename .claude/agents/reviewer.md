@@ -31,7 +31,7 @@ spec-spine is an installed CLI tool that governs this repo's spec corpus. In thi
 | Surface | Path | Key concerns |
 |---------|------|--------------|
 | Spec corpus | `specs/NNN-slug/spec.md` | Frontmatter schema, compiler compatibility, relationship edges, `implementation` status flips |
-| Code | pre-code until spec 002 lands; then the chassis dirs (`addon/`, `core/`, `auth/`, `idp/`, `lib/`, `hiq/`, `health/`, `web/`) plus `tenants/`, `factory/`, `fleet/`, `webapp/` (governance UI) | Correctness, error handling, public API surface, service-boundary discipline |
+| Code | pre-code until spec 002 lands; then the chassis dirs (`addon/`, `core/`, `auth/`, `idp/`, `lib/`, `hiq/`, `health/`, `web/`) plus `tenants/`, `factory/`, `fleet/`, `frontend/` (governance UI) | Correctness, error handling, public API surface, service-boundary discipline |
 | Standard | `standards/spec/` | Contract and constitution alignment |
 | Derived | `.derived/` | Must not be hand-edited; only `spec-spine compile` / `spec-spine index` output, committed as shards |
 

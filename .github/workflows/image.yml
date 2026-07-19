@@ -48,10 +48,10 @@ jobs:
       - run: npm ci
       - name: Build statecraft's own addons (governance + fleet, native linux)
         run: npm run build:addon
-      # webapp is not a root workspace and has its own lockfile; build:web only
+      # frontend is not a root workspace and has its own lockfile; build:web only
       # runs `vite build`, it does not install. Install its deps first.
-      - name: Install the webapp (SPA) deps
-        run: npm --prefix webapp ci
+      - name: Install the frontend (SPA) deps
+        run: npm --prefix frontend ci
       - name: Build the SPA (into backend/web/dist)
         run: npm run build:web
       - name: Build the app bundle (npm toolchain)

@@ -188,7 +188,7 @@ lands.
 
 Validated (dispatched on a branch, iterated to green): `ghcr.io/statecrafting/statecraft`
 is published and pullable (`:latest` + `:<sha>`, amd64). Two fixes landed to get
-there: `build:web` needed an explicit `npm --prefix webapp ci` (webapp is not a
+there: `build:web` needed an explicit `npm --prefix frontend ci` (frontend is not a
 root workspace), and the prebuilt `@enrahitu/toolchain-linux-x64` binaries require
 `GLIBC_2.39`, so the build moved to `ubuntu-24.04` and `docker/Dockerfile.base`
 (spec 002) was bumped `node:24-slim` (bookworm, glibc 2.36) -> `node:24-trixie-slim`

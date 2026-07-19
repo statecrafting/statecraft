@@ -27,7 +27,7 @@ shell (spec 002) and the governance spine (spec 008) have now landed:
 Services land under their own numbered specs as their build starts:
 `tenants/` (GitHub App installations), `factory/` (stamping, consuming
 enrahitu's `template.toml` contract), `fleet/` (deployd's orchestration
-core as an in-process napi addon), `webapp/` (governance UI, Vite +
+core as an in-process napi addon), `frontend/` (governance UI, Vite +
 React Router v7).
 
 ## Chassis
