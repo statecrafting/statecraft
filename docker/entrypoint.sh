@@ -52,6 +52,21 @@ host="${hostport%%:*}"
   export BOOTSTRAP_ADMIN_EMAIL="${ENRAHITU_ADMIN_EMAIL:-admin@example.com}"
   BOOTSTRAP_ADMIN_PASSWORD_PLAIN="$(cat "$DATA/rauthy/admin-password")"
   export BOOTSTRAP_ADMIN_PASSWORD_PLAIN
+  # SMTP passthrough. rauthy reads these exact names (its config.toml documents
+  # each as "overwritten by: SMTP_*"), and the operator catalog's smtp group
+  # uses the same spellings, so the deploy passes them straight through.
+  # Without this rauthy keeps its `smtp_url = 'localhost'` default and every
+  # send fails: no password reset, no email verification, no MFA recovery.
+  # Gated on SMTP_URL so a local trial of the image needs no mail server.
+  if [ -n "${SMTP_URL:-}" ]; then
+    export SMTP_URL
+    for _smtp in SMTP_PORT SMTP_USERNAME SMTP_PASSWORD SMTP_FROM; do
+      if [ -n "${!_smtp:-}" ]; then export "${_smtp?}"; fi
+    done
+    echo "[entrypoint] rauthy SMTP enabled via $SMTP_URL"
+  else
+    echo "[entrypoint] no SMTP_URL; rauthy mail is disabled (password reset unavailable)" >&2
+  fi
   cd /rauthy
   exec ./rauthy serve
 ) &

@@ -27,7 +27,7 @@ summary: >
   claim that every `RAUTHY_*` key survives the move into the container is
   corrected to the verified image behavior, which self-seeds its own
   identity. The catalog goes from 47 keys to 33, `auth.<DOMAIN>` is
-  settled as not returning, and the six keys a deploy genuinely owes the
+  settled as not returning, and the keys a deploy genuinely owes the
   container are named.
 ---
 
@@ -129,15 +129,22 @@ by category:
   the files that `backend/lib/secrets.ts` falls back to. They are now
   `required = false` with that consumer restated, and the catalog states
   that injecting them is forbidden.
-- **Kept, held against a named upstream gap (7):** `RAUTHY_S3_*` and the
-  SMTP group. Neither is exported by the entrypoint, so the embedded
-  rauthy has no backup target and no mail transport (spec 009 section
-  4.8, items 1 and 2). They are kept rather than dropped because the
-  operator holds provisioned credentials, the gap has a named owner in
-  the enrahitu chassis, and their absence is a **capability loss** rather
-  than material the image supersedes. `RAUTHY_S3_*` becomes an optional
+- **Kept, held against a named upstream gap (2):** `RAUTHY_S3_*`. It is
+  not exported by the entrypoint, so the embedded rauthy has no backup
+  target (spec 009 section 4.8 item 2). It is kept rather than dropped
+  because the operator holds provisioned credentials, the gap has a named
+  owner in the enrahitu chassis, and its absence is a **capability loss**
+  rather than material the image supersedes. It becomes an optional
   all-or-nothing group so the catalog stops claiming the platform
   requires what nothing reads.
+- **Kept, and live as of 2026-07-20 (5):** the SMTP group. It was held on
+  the same reasoning as `RAUTHY_S3_*` until spec 009 section 4.8 item 1
+  was closed by wiring the entrypoint to forward all five variables into
+  the rauthy subshell. Its consumer is now the embedded rauthy rather
+  than "none today": `SMTP_PASSWORD` becomes the seventh key of the pod
+  Secret, and `SMTP_URL` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_FROM`
+  are non-secret plain env. The group stays all-or-nothing and optional,
+  because omitting it disables mail rather than failing the boot.
 - **Kept, and the only rauthy keys with a live consumer (3):** the
   `GITHUB_UPSTREAM_*` pair and `RAUTHY_ADMIN_TOKEN`, the credentials of
   the seeder Job. Their consumer is restated as that Job and its own
@@ -153,7 +160,7 @@ by category:
   pair has no consumer until a second provider is converged. It is held
   on the same reasoning as the SMTP group rather than counted as live.
 
-Six keys, and only six, are genuinely required from a deploy and belong
+Seven keys, and only seven, are genuinely required from a deploy and belong
 on the pod Secret: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_B64`,
 `GITHUB_WEBHOOK_SECRET`, `FLEET_S3_RESTIC_PASSWORD`,
 `FLEET_S3_ACCESS_KEY_ID`, `FLEET_S3_SECRET_ACCESS_KEY` (the first of the
@@ -342,7 +349,7 @@ each value. **It holds no values.** From it:
 
 **The operator `.env` is the origin of record for the material the
 platform still needs from an operator**, which after §2.1 is a much
-smaller set: the cluster and provider credentials, the six keys the pod
+smaller set: the cluster and provider credentials, the seven keys the pod
 Secret carries, and the seeder's three. That origin is what lets §2.1
 delete rauthy ciphertext from the tree without losing anything.
 
@@ -381,7 +388,7 @@ The three platform keys are catalogued but deliberately **absent from
 `infra.config.json`**: their consumer is a restic CronJob, a separate
 workload with its own Secret, so they never reach the app pod. This is
 the same containment spec 009 §4.5 applies to the seeder Job's
-credentials, and it keeps the pod Secret at six keys. Custody of
+credentials, and it keeps the pod Secret at seven keys. Custody of
 `PLATFORM_S3_RESTIC_PASSWORD` belongs with the break-glass material
 (spec 009 §4.6), not with the fleet's: losing both it and the volume is
 unrecoverable.

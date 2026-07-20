@@ -92,6 +92,19 @@ enrahitu 018 §4 delegated to the first stamped consumer.
    `README.md`, `LICENSE`, `spec-spine.toml`, the spec-spine workflow):
    this repo's identity wins. Never import enrahitu's `.env` (a live
    secret). `.gitignore` is merged into this repo's existing one.
+
+   **Divergence from upstream, 2026-07-20.** `docker/entrypoint.sh` was
+   byte-identical to enrahitu's copy until spec 009 §4.8 item 1 was closed
+   here: it now forwards the five `SMTP_*` variables into the rauthy
+   subshell, gated on `SMTP_URL`, so the embedded rauthy has a mail
+   transport instead of failing every send against rauthy's
+   `smtp_url = 'localhost'` default. The change landed in this repo rather
+   than upstream because the published image builds from this copy and the
+   deploy needed it; mirroring it into `statecrafting/enrahitu` is an open
+   follow-up. Until that lands the two files differ, and **the next chassis
+   sync must not silently revert it**: re-importing enrahitu's
+   `docker/entrypoint.sh` wholesale would remove the mail transport without
+   any gate noticing, since no test covers it.
 2. The root `package.json` is written fresh, not copied: app name
    `statecraft`, `@enrahitu/toolchain` and `@enrahitu/hiqlite-native`
    pinned to `0.1.0` from the registry (binaries resolve from

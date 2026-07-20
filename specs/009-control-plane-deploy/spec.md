@@ -27,7 +27,7 @@ summary: >
   identity on first boot, so the shared-rauthy secret set is void, five of the
   eleven Encore secrets are discarded by the entrypoint if injected, and the
   /data volume becomes the identity anchor of the platform. What the deploy
-  still owes the container: six real secrets, the non-secret env, a Postgres
+  still owes the container: seven real secrets, the non-secret env, a Postgres
   URL, an ingress, and one seeder pass for the only thing first boot cannot
   seed (the upstream GitHub provider, which rauthy has no declarative
   bootstrap for). Operator surfaces gate on the custom statecraft_operator
@@ -129,11 +129,18 @@ overwritten in the same shell.
 **Genuinely required from the deploy** (nothing in the image can mint them):
 `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_B64`, `GITHUB_WEBHOOK_SECRET`,
 `FLEET_S3_RESTIC_PASSWORD`, `FLEET_S3_ACCESS_KEY_ID`,
-`FLEET_S3_SECRET_ACCESS_KEY`. (The restic key was spelled
-`RESTIC_PASSWORD` until the 2026-07-20 credential split; see section 4.3
-rule 2.)
+`FLEET_S3_SECRET_ACCESS_KEY`, and `SMTP_PASSWORD`. (The restic key was
+spelled `RESTIC_PASSWORD` until the 2026-07-20 credential split; see section
+4.3 rule 2.)
 
-The cluster Secret this deploy creates therefore carries **six** keys, not
+**`SMTP_PASSWORD` joined that list on 2026-07-20**, when section 4.8 item 1
+was closed by wiring rauthy's mail transport in the entrypoint. It is the
+only secret among the five SMTP keys; the other four are non-secret and
+travel as plain env (section 4.4). Before that change the embedded rauthy
+kept rauthy's `smtp_url = 'localhost'` default, so every send failed and
+password reset, email verification, and MFA recovery did not work.
+
+The cluster Secret this deploy creates therefore carries **seven** keys, not
 eleven. `infra.config.json` keeps all 11 declarations unchanged: Encore
 requires every `secret()` a service calls to be defined, and the entrypoint is
 what satisfies the five. The rule this spec adopts is that **injecting a
@@ -363,7 +370,7 @@ On the spec 010 cluster, in its own namespace:
   existed; creating it is what makes the host real. DNS is an A record to the
   worker, because ingress-nginx tolerates no control-plane taint (spec 010
   section 4).
-- A **Secret** with the six keys of section 2.2, and **no others**.
+- A **Secret** with the seven keys of section 2.2, and **no others**.
 - **Postgres**: the control plane's own born-empty database on 010's Postgres,
   addressed by `ENRAHITU_LEDGER_URL`; the driver is chosen by URL scheme (spec
   003). CoreLedger's schema init is CREATE-only with no auto-migration, which
@@ -388,7 +395,7 @@ The deployed configuration sets `cloud` to a value outside Encore's known set
 (`local`, `encore`, `aws`, `gcp`, `azure`), which maps to Unspecified and
 restores fail-loud resolution. This is the single highest-value line in the
 deployed config, because it converts the failure mode of section 2.2's
-six-key Secret from a silent misconfiguration into a crash loop.
+seven-key Secret from a silent misconfiguration into a crash loop.
 
 ### 4.3 The volume is the identity anchor
 
@@ -430,7 +437,7 @@ Three rules follow.
 
    Those three are **not** on the pod. They mount on the CronJob's own Secret,
    on the same reasoning section 4.5 applies to the seeder Job, so the pod
-   Secret stays at the six keys of section 2.2. Custody of
+   Secret stays at the seven keys of section 2.2. Custody of
    `PLATFORM_S3_RESTIC_PASSWORD` belongs with the break-glass material
    (section 4.6): losing it and the volume together is unrecoverable, since
    nothing else decrypts the backup.
@@ -470,6 +477,15 @@ lowercase spelling survives in a doc comment at `backend/governance/config.ts:16
 (spec 008 territory, comment only, no behavior); worth correcting there when
 that file is next touched.
 
+**Read by the embedded rauthy, set by the deploy (added 2026-07-20):**
+`SMTP_URL`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_FROM`. These four are
+non-secret and travel as plain env; the fifth, `SMTP_PASSWORD`, is the seventh
+key of the pod Secret (section 2.2). The entrypoint forwards all five into the
+rauthy subshell only when `SMTP_URL` is set, so omitting the group is a
+supported configuration that disables mail rather than a failure (section 4.8
+item 1). They are consumed by rauthy, not by any Encore service, which is why
+they appear here rather than in `infra.config.json`.
+
 `WEBAPP_BASE_URL` is **optional and deliberately left unset**. It only steers
 the post-install redirect of the GitHub App flow, and an unset value yields a
 relative redirect that lands on this app's own origin, which is correct for a
@@ -507,7 +523,7 @@ The deploy therefore runs a **seeder Job**, after the pod is healthy:
 
 The Job's three credentials (`RAUTHY_ADMIN_TOKEN` and the two
 `GITHUB_UPSTREAM_*` values) live in **their own Secret, mounted only on the
-Job**, never on the app pod. The pod's Secret stays at the six keys of section
+Job**, never on the app pod. The pod's Secret stays at the seven keys of section
 2.2: the control plane never needs to authenticate as an IdP administrator,
 and mounting a provider-management credential beside the application would
 hand every code path in the app the ability to rewrite the identity plane.
@@ -572,11 +588,39 @@ OTel traces are in the same position and are not configured here.
 ### 4.8 Upstream gaps this deploy surfaces
 
 Four items belong to the enrahitu chassis, not to this repo, and are recorded
-here because this deploy is what makes them concrete:
+here because this deploy is what makes them concrete. **Item 1 was closed on
+2026-07-20**; the other three stand.
 
-1. **The embedded rauthy has no SMTP.** The entrypoint exports no mail
-   configuration, so password reset and email verification do not work. The
-   catalog's whole SMTP group has no consumer until this is wired.
+1. **The embedded rauthy has no SMTP. CLOSED 2026-07-20.** The entrypoint
+   exported no mail configuration, so rauthy kept its `smtp_url = 'localhost'`
+   default and every send failed: no password reset, no email verification, no
+   MFA recovery. It was closed rather than carried because the cost was eight
+   lines and the credentials already existed. `docker/entrypoint.sh` now passes
+   the five SMTP variables into the rauthy subshell, gated on `SMTP_URL` so a
+   local trial of the image still needs no mail server. rauthy reads those
+   exact names (its `config.toml` documents each as "overwritten by:
+   `SMTP_*`") and the catalog's smtp group already used the same spellings, so
+   no translation layer was needed.
+
+   **Why it mattered less than it looks, and still mattered.** Thesis section
+   3.3 puts exactly two populations in this IdP: customers authenticating
+   through GitHub OAuth upstream, and operators. Neither signs up with a
+   password, so the headline flows never needed mail: GitHub already verified
+   the address, and the break-glass admin password is read from
+   `/data/rauthy/admin-password` by `kubectl exec` rather than emailed. What
+   did need it is recovery on the margins, which is exactly where an identity
+   plane must not be brittle: MFA reset, email-change verification, and the
+   named human operator account of section 4.6 checkpoint 6.
+
+   **This is a spec 002 touch, and a divergence from upstream.**
+   `docker/entrypoint.sh` was byte-identical to enrahitu's copy before this
+   change. Mirroring it into `statecrafting/enrahitu` is a follow-up; until
+   that lands the two differ, and the next chassis sync must not silently
+   revert this.
+
+   Unlike `ENRAHITU_PUBLIC_URL` and `ENRAHITU_ADMIN_EMAIL`, SMTP is read per
+   send rather than at bootstrap, so getting it wrong is a redeploy and never
+   a re-founding (contrast section 4.3 rule 3).
 2. **The embedded rauthy has no backup target.** `RAUTHY_S3_*` is unwired;
    see section 4.3 rule 2 for the interim.
 3. **`BOOTSTRAP_DIR` carries only `clients.json`.** Roles and the seeder API
@@ -601,7 +645,7 @@ check is wanted, not OAP's service-specific fan-out.
   verified by pulling it. **(Met 2026-07-16.)**
 - The deploy stands the control plane up on the 010 cluster with no OAP chart,
   CD, or secret dependency, against its own born-empty database.
-- The pod's Secret carries exactly the six keys of section 2.2. Verified by
+- The pod's Secret carries exactly the seven keys of section 2.2. Verified by
   absence as much as presence: no `JWT_*` and no `RAUTHY_CLIENT_SECRET` is
   injected.
 - Missing secrets fail loud: with `metadata.cloud` off `local` (section 4.2),
