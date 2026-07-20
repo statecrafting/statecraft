@@ -111,7 +111,22 @@ lifted.
     rejected for sharing the failure domain it must survive. The Hetzner
     S3 credential is project-scoped (valid for every bucket in the
     project), so restic client-side encryption is the real at-rest
-    control: protect `RESTIC_PASSWORD`.
+    control: protect `FLEET_S3_RESTIC_PASSWORD`.
+
+    **Renamed 2026-07-20 (from `RESTIC_PASSWORD`).** Spec 009 §4.3 rule 2
+    proposed backing the control plane's own `/data` volume up by reusing
+    this credential. That was rejected: it would encrypt the platform's
+    unreconstructible identity plane (both signing keypairs, the OIDC
+    client secret, rauthy's whole user database) under the same repository
+    password as tenant data, and hand any holder of a tenant-scope
+    credential the platform's identity backup. The platform got its own
+    `PLATFORM_S3_*` group instead, and the unqualified name could no
+    longer tell the two backup domains apart. Historical entries below
+    keep the old spelling, since they record what was true when written.
+
+    The rename is inbound only. `addon/fleet-native` still passes the
+    value into the backup Job as restic's own `RESTIC_PASSWORD` env var,
+    which is restic's CLI contract and is deliberately untouched.
   - **v2 (no-downtime) is not a config flag.** CSI VolumeSnapshot is
     unavailable here (the hcloud-csi-controller runs no csi-snapshotter
     sidecar, no VolumeSnapshotClass CRDs exist, and Hetzner block volumes
@@ -188,7 +203,8 @@ Deferred (external state), keeping this spec in-progress:
 - **Live E2E** (deploy a real image, serve `/health` through the Ingress,
   update, produce a backup artifact, remove): needs cluster access,
   `*.deployd.xyz` DNS with the Cloudflare token covering the zone, the fleet S3
-  secret key and a `RESTIC_PASSWORD`, and a real stamped image ref (§4 E2E).
+  secret key and a `FLEET_S3_RESTIC_PASSWORD`, and a real stamped image ref
+  (§4 E2E).
 - **Scale check** (ten apps on one box) (§4 scale check).
 - A dedicated fleet ServiceAccount (namespace-create + workload rights only)
   before any non-operator touches the fleet (§3 operator prerequisites).

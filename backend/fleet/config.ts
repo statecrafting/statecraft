@@ -21,7 +21,7 @@ import { secret } from "encore.dev/config";
 
 import type { BackupTarget } from "./native";
 
-const resticPassword = secret("RESTIC_PASSWORD");
+const resticPassword = secret("FLEET_S3_RESTIC_PASSWORD");
 const s3AccessKey = secret("FLEET_S3_ACCESS_KEY_ID");
 const s3SecretKey = secret("FLEET_S3_SECRET_ACCESS_KEY");
 
@@ -66,7 +66,7 @@ function fromSecretOrEnv(value: string, envName: string): string {
  * repository path (`<namespace>/<app>`) is appended inside the addon.
  */
 export function backupTarget(): BackupTarget | null {
-  const password = fromSecretOrEnv(resticPassword(), "RESTIC_PASSWORD");
+  const password = fromSecretOrEnv(resticPassword(), "FLEET_S3_RESTIC_PASSWORD");
   const accessKeyId = fromSecretOrEnv(s3AccessKey(), "FLEET_S3_ACCESS_KEY_ID");
   const secretAccessKey = fromSecretOrEnv(s3SecretKey(), "FLEET_S3_SECRET_ACCESS_KEY");
   if (!password || !accessKeyId || !secretAccessKey) return null;

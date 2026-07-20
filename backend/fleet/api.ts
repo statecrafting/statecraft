@@ -242,7 +242,7 @@ export const backup = api(
     const app = await getOwnedFleetApp(appId, auth.userID);
     if (!app) throw APIError.notFound("app not found");
     const target = backupTarget();
-    if (!target) throw APIError.failedPrecondition("backup target is not configured (RESTIC_PASSWORD / S3 keys)");
+    if (!target) throw APIError.failedPrecondition("backup target is not configured (FLEET_S3_RESTIC_PASSWORD / S3 keys)");
 
     const gated = await gateOrDeny("backup", { tenantId: app.tenantId, app: app.name }, "soft");
     const op = await startOp(app.id, "backup");

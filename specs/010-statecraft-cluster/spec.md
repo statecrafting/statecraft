@@ -155,9 +155,10 @@ by category:
 
 Six keys, and only six, are genuinely required from a deploy and belong
 on the pod Secret: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_B64`,
-`GITHUB_WEBHOOK_SECRET`, `RESTIC_PASSWORD`, `FLEET_S3_ACCESS_KEY_ID`,
-`FLEET_S3_SECRET_ACCESS_KEY`. Their **delivery** still belongs to spec
-009. The operator `.env` remains the origin of record for the material it
+`GITHUB_WEBHOOK_SECRET`, `FLEET_S3_RESTIC_PASSWORD`,
+`FLEET_S3_ACCESS_KEY_ID`, `FLEET_S3_SECRET_ACCESS_KEY` (the first of the
+restic keys was spelled `RESTIC_PASSWORD` until the 2026-07-20 credential
+split, §4). Their **delivery** still belongs to spec 009. The operator `.env` remains the origin of record for the material it
 still names, so deleting rauthy ciphertext from this tree still loses
 nothing; there is simply far less to re-encrypt than this spec once
 assumed (section 4).
@@ -356,6 +357,34 @@ against a working tree, which is the only claim the catalog now makes for
 those keys. The PEMs already sitting in the operator `.env` are harmless
 to keep and are no longer required; what matters is that they never reach
 the pod.
+
+**The two backup domains carry separate credentials (2026-07-20).** The
+catalog went 33 keys to 36 with a `platform_s3` group:
+`PLATFORM_S3_ACCESS_KEY_ID`, `PLATFORM_S3_SECRET_ACCESS_KEY`, and
+`PLATFORM_S3_RESTIC_PASSWORD`, against a bucket the operator provisioned
+the same day. `RESTIC_PASSWORD` was renamed `FLEET_S3_RESTIC_PASSWORD` in
+the same pass, because once a platform sibling existed the unqualified
+name could not say which domain it protected.
+
+Spec 009 §4.3 rule 2 originally proposed backing the control plane's
+`/data` up with the fleet's credentials, "reusing `RESTIC_PASSWORD` and
+the `FLEET_S3_*` credentials the pod already holds". That is rejected
+here. The fleet's credentials protect **tenant** app volumes and are
+handled routinely by the placement path; `/data` is the platform's
+identity plane, which §4 above states is not reconstructible from
+anything in this tree. Encrypting it under the tenant repository password
+would put the platform's only irreplaceable material behind a credential
+whose blast radius is every tenant, and the reuse saved nothing but two
+catalog entries.
+
+The three platform keys are catalogued but deliberately **absent from
+`infra.config.json`**: their consumer is a restic CronJob, a separate
+workload with its own Secret, so they never reach the app pod. This is
+the same containment spec 009 §4.5 applies to the seeder Job's
+credentials, and it keeps the pod Secret at six keys. Custody of
+`PLATFORM_S3_RESTIC_PASSWORD` belongs with the break-glass material
+(spec 009 §4.6), not with the fleet's: losing both it and the volume is
+unrecoverable.
 
 **The `/data` volume, not this file, is the identity plane.** Everything
 the platform is (both keypairs, the client secret, rauthy's encryption

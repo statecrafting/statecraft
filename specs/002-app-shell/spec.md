@@ -148,7 +148,13 @@ enrahitu 018 §4 delegated to the first stamped consumer.
   `GITHUB_APP_PRIVATE_KEY_B64`, `GITHUB_WEBHOOK_SECRET`) to
   `infra.config.json`'s `secrets` block so the deployed control plane
   binds them from env; dev leaves them unset (the tenants service reads
-  `process.env` as a local fallback).
+  `process.env` as a local fallback). Spec 006 adds the three fleet backup
+  secrets; one of them, `RESTIC_PASSWORD`, was renamed
+  `FLEET_S3_RESTIC_PASSWORD` on 2026-07-20 when the platform's own `/data`
+  backup got a separate credential group (spec 010 §4). That rename is
+  confined to the `secrets` block's key and its `$env` binding; the
+  eleven-secret count is unchanged, and the new `PLATFORM_S3_*` keys are
+  deliberately not declared here, because the app never reads them.
 
 ## 4. Acceptance
 

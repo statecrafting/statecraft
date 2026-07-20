@@ -36,14 +36,17 @@ top of it.
   config hash.
 - **Backups** are clean-shutdown-consistent: scale to 0, restic `/data` to
   Hetzner Object Storage (`oap-fleet-backups-prod`), scale back to 1 (spec
-  006 §3). `RESTIC_PASSWORD` is the real at-rest control.
+  006 §3). `FLEET_S3_RESTIC_PASSWORD` is the real at-rest control.
 
 ## Configuration
 
 - `FLEET_BASE_DOMAIN` (env, no default): `<name>.<domain>` for app hosts
   (deployd.xyz). Deploy reports a failedPrecondition if unset.
-- `RESTIC_PASSWORD`, `FLEET_S3_ACCESS_KEY_ID`, `FLEET_S3_SECRET_ACCESS_KEY`
-  (secrets): the backup target. Backup reports a failedPrecondition if unset.
+- `FLEET_S3_RESTIC_PASSWORD`, `FLEET_S3_ACCESS_KEY_ID`,
+  `FLEET_S3_SECRET_ACCESS_KEY` (secrets): the backup target. Backup reports a
+  failedPrecondition if unset. The addon passes the password into the backup
+  Job as restic's own `RESTIC_PASSWORD` env var, which is restic's CLI contract
+  and is deliberately not renamed.
 - The kubeconfig is resolved Rust-side by the addon
   (`FLEET_KUBECONFIG_PATH`, else in-cluster / `~/.kube/config`).
 

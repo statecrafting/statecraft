@@ -12,10 +12,12 @@ establishes:
   - ".github/workflows/image.yml"
   - ".dockerignore"
 # Further ownership edges land with their units during implementation (owned
-# paths and this spec move together): the `deploy/` directory arrives with its
-# manifests in stage 2, and .github/workflows/{cd,ai-pr-review,ai-changelog}.yml
-# with theirs (see section 3). `deploy/` is deliberately not declared while it
-# does not exist: this spec is `in-progress`, so spec-spine enforces that a
+# paths and this spec move together): the manifest subtree
+# infra/gitops/clusters/statecraft-hetzner/statecraft/ and its tier file arrive
+# with the manifests in stage 2 (relocated from a top-level `deploy/` on
+# 2026-07-20, see section 3), and .github/workflows/{cd,ai-pr-review,
+# ai-changelog}.yml with theirs. The subtree is deliberately not declared while
+# it does not exist: this spec is `in-progress`, so spec-spine enforces that a
 # declared directory unit is a real directory (I-007).
 summary: >
   Stand the control plane up on the spec 010 cluster as a platform-grade K8s
@@ -126,7 +128,10 @@ overwritten in the same shell.
 
 **Genuinely required from the deploy** (nothing in the image can mint them):
 `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_B64`, `GITHUB_WEBHOOK_SECRET`,
-`RESTIC_PASSWORD`, `FLEET_S3_ACCESS_KEY_ID`, `FLEET_S3_SECRET_ACCESS_KEY`.
+`FLEET_S3_RESTIC_PASSWORD`, `FLEET_S3_ACCESS_KEY_ID`,
+`FLEET_S3_SECRET_ACCESS_KEY`. (The restic key was spelled
+`RESTIC_PASSWORD` until the 2026-07-20 credential split; see section 4.3
+rule 2.)
 
 The cluster Secret this deploy creates therefore carries **six** keys, not
 eleven. `infra.config.json` keeps all 11 declarations unchanged: Encore
@@ -270,13 +275,40 @@ successor task. Platform observability is the in-substrate flag-gated
   `ghcr.io/statecrafting/statecraft` on release and `workflow_dispatch`, amd64
   (the cluster is x86-64). **Landed; see section 4.1.**
 - `.dockerignore`.
-- `deploy/`: the statecraft-owned manifests (a chart or plain manifests plus a
-  `values-hetzner.yaml`) for the Deployment, PVC, Service, Ingress, Secret,
-  and the seeder Job. **Manifests only: this spec is the documentation.**
-  `deploy/README.md` was removed 2026-07-16 because it restated the topology
-  and then drifted from it; `**/README.md` is a coupling bypass prefix, so
-  such a file is a second source of truth no gate checks. The directory holds
-  deployable artifacts; the contract lives here.
+- `infra/gitops/clusters/statecraft-hetzner/statecraft/` and its tier file
+  `infra/gitops/clusters/statecraft-hetzner/statecraft-kustomization.yaml`:
+  the statecraft-owned manifests for the Deployment, PVC, Service, Ingress,
+  Secret, the seeder Job, and the `/data` backup CronJob (section 4.3 rule 2).
+  **Manifests only: this spec is the documentation.** A `README.md` beside
+  them is forbidden for the reason one was removed on 2026-07-16: it restated
+  the topology and then drifted, and `**/README.md` is a coupling bypass
+  prefix, so such a file is a second source of truth no gate checks.
+
+  **Relocated 2026-07-20, from a top-level `deploy/`.** Two claims justified
+  the separate directory and both were wrong. The first was that these
+  manifests are the artifact the fleet reuses per tenant. They are not:
+  `addon/fleet-native/src/resources.rs` builds every tenant resource as typed
+  `k8s-openapi` structs in Rust, and spec 006 §1 states its placement shape is
+  "distinct from that full tenant-app chart; it is authored here, not lifted".
+  There is no chart for tenants to reuse, so section 1's "same shape the fleet
+  will run" is a claim about topology (container + volume + ingress), not
+  about a shared artifact. The second was that spec ownership required a
+  separate root directory. It does not: nested ownership is this corpus's
+  established pattern, with spec 002 owning `backend/` while 004, 005, 006,
+  and 008 own subdirectories inside it. Spec 010 keeps `infra/`; this spec
+  owns the subtree above.
+
+  What decided it is maintainability rather than governance. A second
+  top-level location for Kubernetes YAML is how OAP arrived at five of them,
+  with cert-manager ClusterIssuers duplicated across `k8s/bootstrap/` and
+  `gitops/clusters/hetzner-prod/manifests/`. One Flux tree with one tier per
+  concern is the structure that keeps the coupling gate meaningful, and the
+  app is a tier like any other: `dependsOn: infrastructure`, so Postgres,
+  ingress-nginx, and cert-manager are Ready before the control plane places.
+
+  The one genuine spec 010 touch is a single line added to that tree's root
+  `kustomization.yaml` resource list, which is a coordinated edit, not a
+  waiver.
 - `.github/workflows/cd.yml`: on push to `main` (sha-pinned) and on
   `workflow_dispatch`; never floats `latest` onto the running release.
 - `.github/workflows/ai-pr-review.yml` and `ai-changelog.yml`: ported from OAP
@@ -380,10 +412,28 @@ Three rules follow.
    safe; recreating the volume is a re-founding.
 2. **The volume must be backed up before the platform carries anything real.**
    rauthy's own S3 backup path is not wired into the image (section 2.3), so
-   the interim mechanism is volume-level (a Hetzner volume snapshot, or a
-   scheduled `restic` job against the Hetzner bucket, reusing `RESTIC_PASSWORD`
-   and the `FLEET_S3_*` credentials the pod already holds). Wiring rauthy's
-   native backups is an enrahitu chassis change, tracked in section 4.8.
+   the interim mechanism is volume-level: a scheduled `restic` CronJob against
+   a Hetzner bucket. Wiring rauthy's native backups is an enrahitu chassis
+   change, tracked in section 4.8.
+
+   **Corrected 2026-07-20.** This rule previously said the job should reuse
+   `RESTIC_PASSWORD` and the `FLEET_S3_*` credentials the pod already holds.
+   It must not. Those protect **tenant** app volumes and travel with the
+   placement path; `/data` is the platform's identity plane, and rule 1 above
+   is the whole reason it is treated differently. Reusing the tenant
+   credential would encrypt the one artifact this section calls
+   unreconstructible under a repository password whose blast radius is every
+   tenant, to save two catalog entries. The operator provisioned a separate
+   bucket and the `PLATFORM_S3_*` group (spec 010 §4) instead:
+   `PLATFORM_S3_ACCESS_KEY_ID`, `PLATFORM_S3_SECRET_ACCESS_KEY`,
+   `PLATFORM_S3_RESTIC_PASSWORD`.
+
+   Those three are **not** on the pod. They mount on the CronJob's own Secret,
+   on the same reasoning section 4.5 applies to the seeder Job, so the pod
+   Secret stays at the six keys of section 2.2. Custody of
+   `PLATFORM_S3_RESTIC_PASSWORD` belongs with the break-glass material
+   (section 4.6): losing it and the volume together is unrecoverable, since
+   nothing else decrypts the backup.
 3. **`ENRAHITU_PUBLIC_URL` must be correct before first boot.** The client
    bootstrap derives `redirect_uris`, `post_logout_redirect_uris`, and
    `allowed_origins` from it, and rauthy applies bootstrap data only while its

@@ -47,6 +47,6 @@
     "summary": "Stand the control plane up on the spec 010 cluster as a platform-grade K8s deployment at app.statecraft.ing. Rewritten ground-up 2026-07-19 to the two-plane thesis (001 section 3), which unpauses it. The rewrite inverts the deploy's job: the published image is embedded-rauthy and self-seeds its own identity on first boot, so the shared-rauthy secret set is void, five of the eleven Encore secrets are discarded by the entrypoint if injected, and the /data volume becomes the identity anchor of the platform. What the deploy still owes the container: six real secrets, the non-secret env, a Postgres URL, an ingress, and one seeder pass for the only thing first boot cannot seed (the upstream GitHub provider, which rauthy has no declarative bootstrap for). Operator surfaces gate on the custom statecraft_operator role, seeded here; rauthy_admin stays break-glass. Live bring-up is a human checkpoint.\n",
     "title": "The control-plane deploy: one governed container on the statecraft cluster"
   },
-  "shardHash": "862dc245decc2fd97e2e5f870de86ad8804034aa82e0064fdeeefff6a2de3cb0",
+  "shardHash": "f29ca51d6ed8ccc8e00e989ede9bf0c418e0f5c368c3fc70655aa931d5ff93b0",
   "specVersion": "1.1.0"
 }
