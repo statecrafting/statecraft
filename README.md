@@ -3,11 +3,19 @@
 The governed agentic delivery control plane: intent becomes a governed
 spec, the factory stamps an application from the
 [EnRaHiTu template](https://github.com/statecrafting/enrahitu), the fleet
-operates the resulting hermetic containers, and the customer's code lives
+operates the resulting governed cells, and the customer's code lives
 in the customer's GitHub org the entire time.
 
+The architecture is a two-plane model (spec 001 §3): the platform is one
+EnRaHiTu app, and every tenant app is another, independent EnRaHiTu app
+with its own embedded IdP, its own state, and its own `/metrics`. Every
+app is a governed cell: a hermetic single container carrying
+`app-model.json`, the hash-anchored extracted record of what it contains
+and what it is permitted to do.
+
 statecraft is itself the first production EnRaHiTu app: one container,
-embedded [rauthy](https://github.com/sebadob/rauthy) as the platform IdP,
+embedded [rauthy](https://github.com/sebadob/rauthy) as the platform IdP
+(operator surfaces gated on the custom `statecraft_operator` role),
 [hiqlite](https://github.com/sebadob/hiqlite) in-process, CoreLedger for
 durable state (on Postgres; stamped customer apps run the same decorator
 API on libSQL/Turso). Every fleet operation sold to customers is
@@ -15,20 +23,25 @@ rehearsed on the platform itself first.
 
 ## Status
 
-Born governed. The spec spine is the authoritative design record; the app
-shell (spec 002) and the governance spine (spec 008) have now landed:
+Born governed. The spec spine is the authoritative design record; the
+services of specs 002 through 008 have landed, and the deploy and
+cluster specs (009/010) are in progress:
 
 - `specs/000-bootstrap/` defines the spec system itself.
 - `specs/001-statecraft-thesis/` is the product thesis, the consolidation
   record (what moves here from the Open Agentic Platform research era),
   the service map, and the milestone ladder (M1 template contract through
-  M5 paying agencies).
+  M5 paying agencies). Rewritten ground-up 2026-07-19 from the
+  grand-refactor realignment: the two-plane model, embedded rauthy as
+  the platform IdP, the per-app observability contract (`/metrics` +
+  OTel), and `app-model.json` as the governance seam.
 
-Services land under their own numbered specs as their build starts:
-`tenants/` (GitHub App installations), `factory/` (stamping, consuming
-enrahitu's `template.toml` contract), `fleet/` (deployd's orchestration
-core as an in-process napi addon), `frontend/` (governance UI, Vite +
-React Router v7).
+Services live under their own numbered specs: `tenants/` (GitHub App
+installations), `factory/` (stamping, consuming enrahitu's
+`template.toml` contract and nothing else), `fleet/` (deployd's
+orchestration core as an in-process napi addon), `governance/`
+(attestation ledger + action gate + trust window), `frontend/`
+(governance UI, Vite + React Router v7).
 
 ## Chassis
 

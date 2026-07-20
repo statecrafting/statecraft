@@ -5,13 +5,17 @@
 statecraft is the governed agentic delivery control plane: tenants
 (per-customer GitHub App installations), factory (stamps apps from the
 enrahitu template via its versioned `template.toml` contract), fleet
-(operates stamped single-container apps; deployd's orchestration core as
-an in-process napi addon), and the governance UI. It is itself the first
-production EnRaHiTu app. The thesis, consolidation record, service map,
-and milestone ladder live in `specs/001-statecraft-thesis/spec.md`.
+(operates stamped governed cells; deployd's orchestration core as an
+in-process napi addon), and the governance UI. It is itself the first
+production EnRaHiTu app, on a two-plane model: the platform is one
+EnRaHiTu app, every tenant app is another, independent one. The thesis,
+consolidation record, service map, and milestone ladder live in
+`specs/001-statecraft-thesis/spec.md` (rewritten ground-up 2026-07-19
+from the grand-refactor realignment).
 
-The repo is currently pre-code: the spec spine is the substance, and
-services land under their own numbered specs as their build starts.
+The services of specs 002 through 008 have landed; the spec spine stays
+the authoritative design record, and new surfaces land under their own
+numbered specs as their build starts.
 
 ## Repository Structure
 
@@ -22,8 +26,11 @@ standards/   spec-spine constitution, contract, templates
 .claude/     rules (orchestrator, governed reads, adversarial refusal)
 ```
 
-Planned service directories (spec 001 §3): `addon/`, `core/`, `auth/`,
-`idp/`, `tenants/`, `factory/`, `fleet/`, `frontend/`.
+Service layout (spec 001 §3): `backend/` (the Encore.ts app: `auth/`,
+`idp/`, `core/`, `tenants/`, `factory/`, `fleet/`, `governance/`, plus
+chassis plumbing), `addon/` (fleet-native + governance-native, napi-rs),
+`frontend/` (governance UI); `frontend-admin/` (flag-gated operator
+dashboard) arrives with the substrate rewrite.
 
 ## Governance
 
