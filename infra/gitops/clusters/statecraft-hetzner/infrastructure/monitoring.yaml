@@ -1,15 +1,19 @@
-# Platform metrics stack (kube-prometheus-stack HelmRelease, spec 010).
+# Platform metrics sink (kube-prometheus-stack HelmRelease, spec 010).
 #
-# One Prometheus with three roles: RECEIVES statecraft's Encore remote_write
-# (Encore's exporter pushes; no scrape endpoint), SCRAPES pull targets
-# (ingress-nginx, Flux, node-exporter, kube-state-metrics), and SERVES Grafana.
-# The unauthenticated remote-write receiver is reachable only in-cluster; it is
-# never exposed at ingress.
+# One Prometheus with two roles: RECEIVES statecraft's Encore remote_write
+# (Encore's exporter pushes; no scrape endpoint) and SCRAPES pull targets
+# (ingress-nginx, Flux, node-exporter, kube-state-metrics).
 #
-# Grafana's sole auth path is rauthy OIDC (generic_oauth); the local login form
-# and initial admin are disabled. Grafana consumes the `grafana-oidc` Secret
-# (GF_AUTH_GENERIC_OAUTH_CLIENT_ID/_SECRET) from the SOPS `secrets` tier; until
-# it exists the Grafana pod blocks while the data plane is already live.
+# It has no UI and no identity. Grafana was dropped with its OIDC client in the
+# observability pivot (spec 010 section 2.2): platform observability is the
+# in-substrate flag-gated frontend-admin, same-origin behind
+# statecraft_operator, so a cluster dashboard would need either no auth at
+# ingress or exactly the standalone monitoring identity the thesis retires.
+# Prometheus is kept because the substrate contract makes every app export
+# /metrics, and because cluster-plane signals are invisible from inside a
+# container. Nothing here may gain an Ingress or a LoadBalancer Service:
+# in-cluster reachability is the whole posture. Until frontend-admin reads it,
+# the operator reads it with `kubectl port-forward`.
 #
 # Alertmanager and the ~100 bundled default rules stay OFF (alerting policy is
 # a later spec, not a chart default).
@@ -123,52 +127,9 @@ spec:
               - source_labels: [__meta_kubernetes_pod_name]
                 target_label: pod
 
+    # Dropped in the observability pivot (see the header). Re-enabling it would
+    # reintroduce the standalone monitoring identity thesis section 3.4
+    # retires; the fleet's per-tenant Grafana add-on (spec 006) is a separate,
+    # tenant-scoped surface and is not this.
     grafana:
-      enabled: true
-      defaultDashboardsEnabled: false
-      envFromSecret: grafana-oidc
-      persistence:
-        enabled: true
-        size: 2Gi
-      ingress:
-        enabled: true
-        ingressClassName: nginx
-        annotations:
-          # DNS-01 issuer (not HTTP-01) so grafana.statecraft.ing's cert issues
-          # before DNS is pointed at the cluster.
-          cert-manager.io/cluster-issuer: letsencrypt-prod-dns01-cloudflare
-        hosts:
-          - grafana.statecraft.ing
-        tls:
-          - secretName: grafana-tls
-            hosts:
-              - grafana.statecraft.ing
-      grafana.ini:
-        server:
-          root_url: https://grafana.statecraft.ing
-        security:
-          disable_initial_admin_creation: true
-        auth:
-          disable_login_form: true
-        auth.anonymous:
-          enabled: false
-        auth.basic:
-          enabled: false
-        auth.generic_oauth:
-          enabled: true
-          name: Rauthy
-          auto_login: true
-          use_pkce: true
-          allow_sign_up: true
-          scopes: openid email profile
-          auth_url: https://auth.statecraft.ing/auth/v1/oidc/authorize
-          token_url: https://auth.statecraft.ing/auth/v1/oidc/token
-          api_url: https://auth.statecraft.ing/auth/v1/oidc/userinfo
-          # The operator carries rauthy's built-in `rauthy_admin` role; map it
-          # to Grafana Admin, everyone else to Viewer. Refine once the app
-          # seeds a platform_role custom scope (spec 009). Not strict, so a
-          # missing role degrades to Viewer rather than a failed login.
-          role_attribute_strict: false
-          role_attribute_path: >-
-            contains(roles[*], 'rauthy_admin') && 'Admin' ||
-            contains(roles[*], 'admin') && 'Admin' || 'Viewer'
+      enabled: false

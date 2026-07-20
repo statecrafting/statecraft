@@ -25,13 +25,6 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: rauthy-system
-  labels:
-    statecraft.spec: "010-statecraft-cluster"
----
-apiVersion: v1
-kind: Namespace
-metadata:
   name: monitoring
   labels:
     statecraft.spec: "010-statecraft-cluster"

@@ -15,23 +15,27 @@
     "sectionHeadings": [
       "010: The statecraft cluster",
       "1. Purpose",
-      "2. Territory",
-      "3. Behavior",
+      "2. What the realignment retires",
+      "2.1 The cluster rauthy is retired",
+      "2.2 Grafana is dropped; Prometheus is kept, demoted",
+      "2.3 What stands",
+      "3. Territory",
+      "4. Behavior",
       "Cluster",
       "GitOps",
       "Secrets: one documented source, two outputs",
       "Platform services",
-      "Rauthy: rebuild, do not migrate",
-      "Cutover",
-      "Teardown",
-      "4. Acceptance",
-      "5. Out of scope"
+      "Object storage",
+      "DNS",
+      "5. Acceptance",
+      "6. Human checkpoints",
+      "7. Out of scope"
     ],
     "specPath": "specs/010-statecraft-cluster/spec.md",
     "status": "approved",
-    "summary": "statecraft did not own the cluster it ran on: the nodes were named for OAP and Flux reconciled it from the open-agentic-platform repository. Build a statecraft-owned hetzner-k3s cluster reconciled by Flux from a statecraft-owned in-repo GitOps tree, with one documented secret source that generates both the local-dev `.env` and the SOPS-encrypted cluster secrets Flux decrypts in-cluster. Stand up the platform services (cert-manager, ingress-nginx, rauthy, Postgres, NSQ, prometheus/grafana); object storage is Hetzner Object Storage, not an in-cluster service. The old cluster was torn down first (2026-07-17), because it was not worth keeping as a fallback, so this is a greenfield build: DNS points at the new cluster once it serves, and there is no blue-green rollback target.\n",
-    "title": "The statecraft cluster: Flux GitOps, SOPS secrets, platform services"
+    "summary": "The statecraft-owned hetzner-k3s cluster, reconciled by Flux from an in-repo GitOps tree, with one documented secret source that generates the operator `.env.example` and the SOPS-encrypted secrets Flux decrypts in-cluster. Rewritten ground-up 2026-07-19 to the two-plane thesis (001 §3): identity and observability moved inside the control-plane container, so the cluster keeps only what a container cannot do for itself. The standalone cluster rauthy is retired (embedded rauthy is THE platform IdP) and cluster Grafana is dropped with its OIDC client (platform observability is the in-substrate flag-gated admin dashboard); Prometheus is kept, demoted to an unexposed in-cluster metrics sink. What stands: the Flux tree, SOPS, cert-manager, ingress-nginx, reflector, Postgres, NSQ, and Hetzner Object Storage. The cluster is live (PRs #27-#29); this rewrite is the first change that prunes services from it.\n",
+    "title": "The statecraft cluster: the substrate beneath the control-plane container"
   },
-  "shardHash": "aea9facc57a9159e2b77dccadbe8b610bbe5fe69057cad7cdb3c85f7c53705aa",
+  "shardHash": "cf3994c6e55ea6b3d2604a5eda859a673f098527a347290707a6e5f411312862",
   "specVersion": "1.1.0"
 }

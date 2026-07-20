@@ -1,6 +1,6 @@
 ---
 id: "010-statecraft-cluster"
-title: "The statecraft cluster: Flux GitOps, SOPS secrets, platform services"
+title: "The statecraft cluster: the substrate beneath the control-plane container"
 status: approved
 created: "2026-07-16"
 implementation: in-progress
@@ -9,341 +9,391 @@ depends_on:
 establishes:
   - { kind: directory, path: "infra/" }
 summary: >
-  statecraft did not own the cluster it ran on: the nodes were named for
-  OAP and Flux reconciled it from the open-agentic-platform repository.
-  Build a statecraft-owned hetzner-k3s cluster reconciled by Flux from a
-  statecraft-owned in-repo GitOps tree, with one documented secret source
-  that generates both the local-dev `.env` and the SOPS-encrypted cluster
-  secrets Flux decrypts in-cluster. Stand up the platform services
-  (cert-manager, ingress-nginx, rauthy, Postgres, NSQ, prometheus/grafana);
-  object storage is Hetzner Object Storage, not an in-cluster service. The
-  old cluster was torn down first (2026-07-17), because it was not worth
-  keeping as a fallback, so this is a greenfield build: DNS points at the
-  new cluster once it serves, and there is no blue-green rollback target.
+  The statecraft-owned hetzner-k3s cluster, reconciled by Flux from an
+  in-repo GitOps tree, with one documented secret source that generates
+  the operator `.env.example` and the SOPS-encrypted secrets Flux
+  decrypts in-cluster. Rewritten ground-up 2026-07-19 to the two-plane
+  thesis (001 §3): identity and observability moved inside the
+  control-plane container, so the cluster keeps only what a container
+  cannot do for itself. The standalone cluster rauthy is retired
+  (embedded rauthy is THE platform IdP) and cluster Grafana is dropped
+  with its OIDC client (platform observability is the in-substrate
+  flag-gated admin dashboard); Prometheus is kept, demoted to an
+  unexposed in-cluster metrics sink. What stands: the Flux tree, SOPS,
+  cert-manager, ingress-nginx, reflector, Postgres, NSQ, and Hetzner
+  Object Storage. The cluster is live (PRs #27-#29); this rewrite is the
+  first change that prunes services from it.
 ---
 
 # 010: The statecraft cluster
 
 ## 1. Purpose
 
-The cluster statecraft runs on is OAP's. Verified 2026-07-16 against the
-live cluster:
+The cluster is what a container cannot do for itself.
 
-- The nodes are `oap-hetzner-master1` and `oap-hetzner-pool-worker-worker1`.
-- Flux's GitRepository is
-  `ssh://git@github.com/statecrafting/open-agentic-platform` (public, **not**
-  archived, last pushed 2026-07-15). It reconciles cert-manager,
-  ingress-nginx, rauthy, monitoring, and reflector into this cluster from
-  another product's repository.
-- The cluster carries research-era state: `nsqd`, `minio`, a Postgres whose
-  `statecraft` database holds OAP's schema (`factory_artifact_substrate` 277
-  rows, `audit_log` 143, `users` 3), two OAP sweeper CronJobs failing on
-  roughly a 50% duty cycle, a `statecraft` Helm release at revision 256, and
-  an ACME http-solver pod stuck for 8 days.
+Under the two-plane model (001 §3.1) the platform is ONE EnRaHiTu app:
+identity lives in the container (embedded rauthy), observability lives in
+the container (the flag-gated admin dashboard), and durable state sits
+behind CoreLedger. What is left for the cluster is the substrate beneath
+that container: machines, ingress, certificates, secret delivery, the
+data services the control plane's drivers target, and a place for metrics
+to land.
 
-statecraft is a greenfield rewrite of the OAP thesis (spec 001 §2). Its
-cluster should be one too. Reconciling a product's infrastructure from a
-different product's repository is not a rot emergency (the source repo is
-alive), but it is a correctness and ownership defect, and it blocks the
-explicit, documented infrastructure this spec exists to establish.
+This spec is rewritten ground-up on 2026-07-19 to that shape. Its
+previous version provisioned the platform's identity provider and the
+platform's operator dashboard as cluster services. The thesis rewrite
+moved both inside the control-plane container, so those parts are
+**retired here rather than amended** (§2). Everything the cluster still
+owes the platform is restated below on its own terms.
 
-**Greenfield, not in place.** There are no live fleet apps to migrate
-(verified 2026-07-16: no app namespaces exist; spec 006's live E2E ended
-with its own remove step). Migrating a live cluster's GitOps source is
-painful; starting clean is not.
+**History, compressed.** The cluster statecraft ran on was OAP's: nodes
+named `oap-hetzner-*`, Flux reconciling from the `open-agentic-platform`
+repository, carrying research-era state. It was torn down on 2026-07-17
+rather than kept as a fallback, and a statecraft-owned cluster was built
+greenfield from a verified-empty Hetzner project. The platform layer came
+up live on 2026-07-18 and Flux was repointed from the feature branch to
+`main` (PRs #27-#29). Both `statecraft-hetzner-*` nodes are Ready, every
+Flux tier reconciles, the SOPS secrets materialize from ciphertext in
+git, and no object on the cluster references `open-agentic-platform`.
+There was never a blue-green rollback target and there is none now.
 
-**Status note (2026-07-17).** Three decisions refined this spec after it was
-written:
+## 2. What the realignment retires
 
-1. A brief attempt to *reuse* the existing cluster in place (rename OAP to
-   statecraft, swap Flux's source live) was tried and reverted: it inverts
-   almost every clause here, keeps the OAP node identity and etcd, and gives
-   up the "born clean" half of the thesis. Back to build-new.
-2. The old cluster was **torn down first** rather than kept as a blue-green
-   fallback, because the operator judged it not worth keeping. The original
-   plan's "delete old last, after new is proven" sequencing is therefore
-   moot, and there is no rollback cluster. Teardown is done (see §3).
-3. In-cluster **minio is dropped** for Hetzner Object Storage (see Platform
-   services). This is the design change that most affects the secret catalog.
+The cluster is live, so this section is not a plan: it is a list of
+services that get pruned from a running cluster when this spec merges
+(§6).
 
-The greenfield build proceeds from a verified-empty Hetzner project.
+### 2.1 The cluster rauthy is retired
 
-**Live bring-up note (2026-07-18).** The platform layer was built and brought
-up live. What is done:
+Thesis 001 §3.3 is literal: embedded rauthy is THE platform IdP, the
+control plane hosts it in-container, and there is no standalone cluster
+rauthy and no second IdP. This spec is where that becomes true of the
+cluster.
 
-- The in-repo half: `infra/secrets/catalog.toml` + a dependency-free generator
-  (`infra/secrets/catalog.ts`) producing `infra/hetzner/.env.example` and
-  validating the operator `.env`; the `infra/gitops/clusters/statecraft-hetzner`
-  Flux tree (four tiers with `dependsOn`); five SOPS-encrypted secrets.
-- Flux was bootstrapped (`flux bootstrap github`, deploy-key path) against the
-  `feat/010-platform-layer` branch. All four tiers reconcile Ready. The five
-  SOPS secrets **materialize in-cluster from ciphertext in git** (the acceptance
-  the OAP reference never actually met). cert-manager, ingress-nginx, reflector,
-  rauthy, Postgres, NSQ, and kube-prometheus-stack (Prometheus + Grafana) are
-  all healthy. `rauthy` reports `db_healthy: true`.
-- Certs issue via the **DNS-01 Cloudflare** ClusterIssuer (rauthy-tls,
-  grafana-tls), which is why they issued before DNS cutover. No object on the
-  cluster references `open-agentic-platform` (zero-hit grep verified).
-- DNS: `auth.statecraft.ing` (Cloudflare-proxied) and `grafana.statecraft.ing`
-  (direct) were created pointing at the worker node and both serve over a valid
-  cert. These records did not previously exist (they died with the old cluster),
-  so the cutover was additive.
+**What goes:** the `rauthy` HelmRelease, the vendored in-tree chart at
+`charts/rauthy/`, the `rauthy-system` namespace, and the two SOPS
+secrets that fed it (`rauthy-secrets`, `rauthy-smtp-secret`). The
+previous spec's "rauthy: rebuild, do not migrate" decision is void, because
+there is nothing here to rebuild.
 
-Two operational facts that the hetzner-k3s `cluster.yaml` schema does not
-express, recorded here as design truth:
+**What stays:** the key material. The IdP moved; it did not disappear.
+Every `RAUTHY_*` key the catalog declares is still required, now by the
+embedded rauthy inside the control-plane container: the hiqlite Raft and
+API secrets, the bootstrap admin password, the `ENC_KEYS` pair, the SMTP
+group, the upstream OAuth provider groups, the S3 backup credentials, and
+the admin token the seed job uses. Their catalog `consumer` annotations
+are restated to name the control-plane container instead of a cluster
+service. Their **delivery** (a Secret in the control-plane namespace,
+shaped to whatever the control-plane chart expects) belongs to spec 009,
+which re-encrypts them from the operator `.env`. That file is the origin
+of record for key material, so deleting the ciphertext here loses
+nothing.
 
-- **The Hetzner firewall must allow inbound TCP 80/443.** hetzner-k3s creates a
-  firewall with SSH/API/NodePort rules only; the ingress-nginx hostPort is
-  unreachable until 80/443 are opened. Added live via `hcloud firewall
-  add-rule`; re-running `hetzner-k3s create` may reset the firewall and need
-  them re-added. Not expressible in `cluster.yaml`; it is an operator step.
-- **ingress-nginx runs only on the worker.** The DaemonSet does not tolerate the
-  control-plane taint, so only the worker serves 80/443; DNS points at the
-  worker IP.
+**Cost, accepted:** `auth.statecraft.ing` stops serving when this merges.
+Nothing consumes it. The rauthy on this cluster is fresh, carries no
+seeded OIDC clients (client seeding was always spec 009's seeder pass),
+and the control plane it would authenticate for is not deployed. The host
+returns with 009.
 
-What remains (keeps this spec `in-progress`):
+**Handed to 009, not pre-empted here:** whether `auth.<DOMAIN>` survives
+as a distinct host at all. The embedded rauthy is reached through the
+app's own same-origin `/auth/v1` proxy (spec 007), so the control plane
+may serve the issuer at `https://<DOMAIN>/auth/v1/` and leave `auth.`
+vestigial. `RAUTHY_URL` therefore keeps its current definition
+(`https://auth.<DOMAIN>`) until 009 decides; this spec does not guess.
 
-- **Operator admin login** to rauthy (browser, session-based; not scripted).
-- **OIDC client seeding.** rauthy is fresh, so the catalog's client
-  ids/secrets (from the old rauthy) are not yet realized in it. The app clients
-  (`OIDC_SPA`, `OIDC_M2M`, `RAUTHY_CLIENT`) are spec 009's concern (its chart
-  runs the seeder). Grafana's OIDC client is now folded into that same 009
-  seeder pass rather than hand-seeded here (operator decision 2026-07-18): its
-  `grafana-oidc` Secret already materializes from SOPS, so only the client
-  registration in rauthy is pending, and doing it by hand would be exactly the
-  out-of-band mutation 009's seeder exists to own.
-- **object_storage read/write** against the Hetzner bucket needs the Encore app
-  (spec 009); only "no in-cluster minio" is verifiable now (it holds).
-- **Fleet E2E** (spec 006 places an app): blocked on the same items the spec 006
-  live run flagged (an amd64 enrahitu image, pull-secret provisioning).
-- **`deploy.` / `app.` DNS**: their services (deployd-api, the control plane)
-  are not deployed here, so those records are deferred to specs 006 / 009.
-**Closeout verification (2026-07-18, continued).** The repoint is done: the
-`flux-system` GitRepository now tracks `main` (PR #28), and the platform was
-re-verified green reconciling `main@sha1:934b002c`: both `statecraft-hetzner-*`
-nodes Ready; all five Flux kustomizations and all five HelmReleases
-(cert-manager, ingress-nginx, reflector, kube-prometheus-stack, rauthy) Ready;
-the SOPS secrets materialized from ciphertext; zero `open-agentic-platform`
-references anywhere on the cluster; `auth.statecraft.ing` serving with
-`db_healthy: true`; and `grafana.statecraft.ing` serving over a valid cert. The
-remaining items above are gated on specs 009 (OIDC seeding, `object_storage`)
-and 006 (fleet E2E), plus the operator admin-login browser checkpoint, so this
-spec stays `in-progress`; the Flux repoint that used to sit in this list is the
-only one now closed.
+### 2.2 Grafana is dropped; Prometheus is kept, demoted
 
-## 2. Territory
+Thesis 001 §3.4 pivots platform observability to the in-substrate
+flag-gated `frontend-admin`, same-origin behind `statecraft_operator`,
+with no separate Grafana OIDC client and no standalone monitoring
+identity. That settles the two halves of the monitoring stack
+differently, so this spec decides each explicitly.
+
+**Grafana: dropped, with its OIDC client.** Grafana's sole auth path here
+was rauthy `generic_oauth` against a dedicated OIDC client. The pivot
+forbids that client, and the cluster rauthy it authenticated against is
+retired by §2.1, so keeping Grafana would mean either an unauthenticated
+dashboard reachable at ingress or reinstating exactly the standalone
+monitoring identity the thesis removes. Neither is acceptable, and the
+client was never actually registered in rauthy, so nobody has ever logged
+in. The Grafana subchart, its ingress, its `grafana-oidc` Secret, and the
+`GRAFANA_OIDC_CLIENT_ID` / `GRAFANA_OIDC_CLIENT_SECRET` catalog keys all
+go. The stale `rauthy_admin` role mapping in its config goes with it,
+which is convenient: fork 6 of the realignment record replaced that role
+with `statecraft_operator`, and this was its last appearance.
+
+**Prometheus: kept, as an unexposed sink.** It is demoted from "the
+metrics stack that serves Grafana" to a data plane with no UI and no
+identity: no ingress, no LoadBalancer, reachable only in-cluster. Kept
+because:
+
+- The substrate contract (001 §3.4) requires every EnRaHiTu app to expose
+  Prometheus `/metrics` and OTel traces. Something has to receive them.
+  The in-substrate dashboard is a renderer, not a time-series store.
+- Cluster-plane signals (node health, ingress, Flux reconciliation, pod
+  restarts across the fleet) are invisible from inside any one container.
+  They are the operator's only view of the machines the fleet places onto,
+  and no in-container dashboard can reconstruct them.
+- The fleet's per-tenant Grafana/Prometheus add-on (001 §3.4, spec 006) is
+  this same machinery at tenant scope. Dropping the platform's copy would
+  mean rebuilding it when the add-on ships.
+
+The demotion is a change of role, not of configuration: only Grafana ever
+carried an ingress, so removing Grafana leaves Prometheus in exactly the
+posture named here. **Who reads it is deferred.** Whether `frontend-admin`
+queries it server-side is a 009 and substrate question; this spec
+provisions the sink and asserts nothing about the consumer. Until a
+consumer exists the operator reads it through `kubectl port-forward`,
+which is deliberate: an operator-only path that needs no second identity
+at the edge.
+
+**Alternative recorded and rejected:** dropping Prometheus alongside
+Grafana. It would save one HelmRelease and a 20Gi volume, at the price of
+blinding the cluster at precisely the layer the in-container dashboard
+cannot see.
+
+### 2.3 What stands
+
+Unchanged by the realignment, and restated so the retirements above are
+not read as a wider retreat:
+
+- **The in-repo Flux GitOps tree**, four tiers with `dependsOn`
+  (`namespaces` -> `secrets` + `infrastructure` -> `manifests`). Decided
+  2026-07-16 and still right: the cluster's definition is governed by the
+  same spine as everything else, so `spec-spine couple` binds an
+  infrastructure change to this spec the way it binds a code change. The
+  cost (Flux needs a deploy key on a repo that also holds application
+  code) is contained by path-scoped kustomizations.
+- **SOPS** for cluster secrets: values encrypted in git, documentation
+  beside them, no plaintext at rest, every rotation an auditable commit.
+- **cert-manager**, both ClusterIssuers, DNS-01 Cloudflare as the default.
+- **ingress-nginx**, DaemonSet with hostPort.
+- **reflector**, which clones annotated Secrets across namespaces for the
+  tenant wildcard TLS cert and the `ghcr-pull` secret (specs 004/006/009).
+  It never had anything to do with rauthy or Grafana.
+- **Postgres** (raw StatefulSet, born empty), the CoreLedger driver target
+  (spec 003, thesis §3.2).
+- **NSQ** (raw manifest). Encore's self-host infra schema supports exactly
+  three pub/sub backends (`gcp_pubsub`, `aws_sns_sqs`, `nsq`), so NSQ is
+  the only self-hostable choice.
+- **Hetzner Object Storage**, not an in-cluster service. The old cluster's
+  minio was dropped 2026-07-17; with a managed S3 already in the picture a
+  self-hosted one was pure redundancy, and block storage is better
+  reserved for workloads that need it.
+- **The secret catalog** as the single documented source (§4).
+
+## 3. Territory
 
 - `infra/`: everything infrastructure, owned by this spec.
   - `infra/hetzner/`: cluster provisioning (hetzner-k3s config, node
-    pools, the operator bootstrap).
+    pools, the operator bootstrap) and the generated `.env.example`.
   - `infra/gitops/clusters/statecraft-hetzner/`: the Flux entrypoint and
     the kustomizations it reconciles.
-  - `infra/secrets/catalog.toml`: the single documented secret source.
-  - `infra/secrets/*.sops.yaml`: SOPS-encrypted cluster secrets.
+  - `infra/secrets/catalog.toml`: the single documented secret source,
+    with `catalog.ts` as its generator and validator.
+  - `infra/gitops/clusters/statecraft-hetzner/secrets/*.sops.yaml`:
+    SOPS-encrypted cluster secrets.
 
-**In-repo GitOps, not a second repository** (decided 2026-07-16). The Flux
-tree lives in this repo so it is governed by the same spine as everything
-else: `spec-spine couple` binds an infrastructure change to this spec the
-same way it binds a code change, and there is one source of truth rather
-than two. The cost is that Flux needs read access to this repo (a deploy
-key) and reconciles a repo that also holds application code; path-scoped
-kustomizations make that a non-issue. The alternative (a standalone
-`statecraft-gitops` repo) buys separation but puts the cluster's definition
-outside the governance this product sells, which is the wrong trade here.
+**Cross-spec touches.** The catalog documents the operator and cluster
+secret surface (the `.env` at `~/.config/statecrafting/infra/hetzner/`).
+It generates its own committed example beside `cluster.yaml` rather than
+the root `.env.example`, which is spec 002's local-dev ledger doc: a
+developer running `npm run dev` sets none of the operator secrets. The
+catalog must *agree with* (not rewrite) two spec 002 artifacts,
+`infra.config.json` and the root `.env.example`; agreement is a
+validation the generator enforces, not an authoring edit. The one genuine
+002 touch is wiring the generator scripts into `package.json`.
 
-**Cross-spec touches at implementation.** The catalog documents the operator
-and cluster secret surface (the `.env` at
-`~/.config/statecrafting/infra/hetzner/`). It generates its own committed
-example, `infra/hetzner/.env.example` (this spec's territory, beside
-`cluster.yaml`), rather than the root `.env.example`: the root file is spec
-002's local-dev ledger doc, a developer running `npm run dev` sets none of the
-operator secrets, so folding the full cluster surface into the root example
-would be a regression, and the reference cluster kept the two separate. The
-catalog must *agree with* (not rewrite) two spec 002 artifacts:
-`infra.config.json` (every secret Encore injects must be declared in the
-catalog) and the root `.env.example`. Agreement is a validation the generator
-enforces, not an authoring edit. The one genuine 002 touch is wiring the
-generator scripts into `package.json`, which lands with a `Spec-Drift-Waiver:`
-or a coordinated 002 edit, not by silently widening this spec's territory.
-
-## 3. Behavior
+## 4. Behavior
 
 ### Cluster
 
-hetzner-k3s, x86-64, nodes named `statecraft-hetzner-*`, provisioned
-alongside the existing cluster and never sharing its state. The operator
+hetzner-k3s, x86-64, nodes named `statecraft-hetzner-*`. The operator
 kubeconfig is `~/.config/statecrafting/infra/hetzner/kubeconfig`; the
-operator `.env` is its sibling. Both paths exist and are empty as of
-2026-07-16.
+operator `.env` is its sibling.
+
+Two operational facts the hetzner-k3s `cluster.yaml` schema cannot
+express, recorded here as design truth:
+
+- **The Hetzner firewall must allow inbound TCP 80/443.** hetzner-k3s
+  creates a firewall with SSH/API/NodePort rules only, so the
+  ingress-nginx hostPort is unreachable until 80/443 are opened. Added
+  live via `hcloud firewall add-rule`; re-running `hetzner-k3s create`
+  may reset the firewall and require re-adding them. It is an operator
+  step, not a manifest.
+- **ingress-nginx runs only on the worker.** The DaemonSet does not
+  tolerate the control-plane taint, so only the worker serves 80/443 and
+  DNS points at the worker IP.
 
 ### GitOps
 
-Flux bootstrapped against this repository at
-`infra/gitops/clusters/statecraft-hetzner`. Acceptance includes a
-zero-hit grep: no manifest, HelmRelease, or GitRepository on the new cluster
-may reference `open-agentic-platform`.
+Flux is bootstrapped against this repository at
+`infra/gitops/clusters/statecraft-hetzner`, tracking `main`. Acceptance
+includes a zero-hit grep: no manifest, HelmRelease, or GitRepository on
+the cluster may reference `open-agentic-platform`.
+
+Every tier sets `prune: true`. That is what makes §2's retirements take
+effect on merge, and it is why they are a human checkpoint (§6).
 
 ### Secrets: one documented source, two outputs
 
 `infra/secrets/catalog.toml` is the single source. It holds names,
-descriptions, ownership, required/optional status, and the consumer of each
-value. **It holds no values.** From it:
+descriptions, ownership, required/optional status, and the consumer of
+each value. **It holds no values.** From it:
 
-- **`.env.example`** is generated: commented, documented, committed. The
-  catalog carries the prose so the generated artifact does not have to.
-- **The local-dev `.env`** (gitignored, at
+- **`infra/hetzner/.env.example`** is generated: commented, documented,
+  committed. The catalog carries the prose so the artifact need not.
+- **The operator `.env`** (gitignored, at
   `~/.config/statecrafting/infra/hetzner/.env`) is validated against the
   catalog: missing required keys and unknown keys both fail.
-- **Cluster secrets** are SOPS-encrypted YAML under `infra/secrets/`,
-  committed, and decrypted in-cluster by Flux. The `age` private key is
-  bootstrapped once into `flux-system` and never committed; the public key
-  is committed so any operator can encrypt.
+- **Cluster secrets** are SOPS-encrypted YAML, committed, decrypted
+  in-cluster by Flux. The `age` private key is bootstrapped once into
+  `flux-system` and never committed; the public key is committed so any
+  operator can encrypt.
 
-This is the reason SOPS beats a hand-carried `.env`: the values live
-encrypted in git, documentation sits beside them, no plaintext rests on
-disk, and every rotation is an auditable commit.
-
-**The JWT signing keys are minted into the operator `.env`** (decided
-2026-07-16). The four `JWT_*` keys (`JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY`,
-`JWT_REFRESH_PRIVATE_KEY`, `JWT_REFRESH_PUBLIC_KEY`) exist in no `.env` and on
-no cluster today; they are RS256 PEMs produced by `npm run generate-keys`, which
-writes them into a gitignored `keys/` that is deliberately absent from images.
-Spec 009 cannot satisfy "a real login completes" without them. They are
-generated once, written into
-`~/.config/statecrafting/infra/hetzner/.env` alongside every other operator
-secret, declared in the catalog, and delivered to the cluster through SOPS like
-the rest. The operator `.env` is therefore the origin of record for key material,
-and the catalog is what makes that origin explicit rather than folkloric.
+**The operator `.env` is the origin of record for key material.** The four
+`JWT_*` RS256 PEMs are minted once by `npm run generate-keys`, written
+there beside every other operator secret, declared in the catalog, and
+delivered to the cluster through SOPS like the rest. That origin is what
+lets §2.1 delete rauthy ciphertext from the tree without losing anything:
+009 re-encrypts from the same file.
 
 ### Platform services
 
-Reconciled by Flux from `infra/gitops/`. Most are HelmReleases; Postgres and
-NSQ are raw manifests (still Flux-reconciled), because NSQ has no maintained
-chart and a single born-empty Postgres on the official image sidesteps the
-Bitnami catalog changes (mid-2025) that leave the old `bitnami/postgresql`
-tags in `ImagePullBackOff`:
+Reconciled by Flux from `infra/gitops/`. Most are HelmReleases; Postgres
+and NSQ are raw manifests (still Flux-reconciled), because NSQ has no
+maintained chart and a single born-empty Postgres on the official image
+sidesteps the Bitnami catalog changes that leave old `bitnami/postgresql`
+tags in `ImagePullBackOff`.
 
-- **cert-manager** (HelmRelease), with both ClusterIssuers (`letsencrypt-prod`
-  and `letsencrypt-prod-dns01-cloudflare`); the DNS-01 solver uses
-  `CLOUDFLARE_DNS_API_TOKEN` from the catalog. Per Acceptance, the DNS-01
-  issuer is the default every platform host uses, so certs issue before DNS is
-  cut over (HTTP-01 cannot solve an unreachable host on a greenfield cluster).
+- **cert-manager** (HelmRelease) with both ClusterIssuers. The DNS-01
+  Cloudflare issuer is the default every platform host uses, so certs
+  issue before DNS is cut over; HTTP-01 cannot solve an unreachable host
+  on a greenfield cluster. The solver uses `CLOUDFLARE_DNS_API_TOKEN`.
 - **ingress-nginx**, **reflector** (HelmReleases).
-- **rauthy** at `auth.<domain>`, fresh (see below); the in-tree vendored chart.
-- **Postgres** (raw StatefulSet, `postgres:17`), born empty. Postgres stays as
-  the CoreLedger driver target (spec 003); only OAP's data is discarded.
-- **NSQ** (raw manifest). Encore's self-host infra schema supports exactly
-  three pub/sub backends (`gcp_pubsub`, `aws_sns_sqs`, `nsq`; verified
-  2026-07-16 against `https://encore.dev/schemas/infra.schema.json`). NSQ is
-  therefore the only self-hostable choice, and `nsqd` on the old cluster was
-  Encore's backend rather than OAP cruft.
-- **prometheus + grafana** (kube-prometheus-stack HelmRelease), backing
-  Encore's `metrics`.
+- **Postgres** (raw StatefulSet, `postgres:17`), born empty.
+- **NSQ** (raw manifest), Encore's pub/sub backend.
+- **Prometheus** (kube-prometheus-stack HelmRelease, Grafana subchart
+  disabled). It receives the control plane's Encore `remote_write`, scrapes
+  the pull targets (ingress-nginx, Flux, node-exporter, kube-state-metrics),
+  and is reachable only in-cluster (§2.2). Alertmanager and the bundled
+  default rules stay off; alerting policy is a later spec, not a chart
+  default.
 
-**Object storage is Hetzner Object Storage, not an in-cluster service**
-(decided 2026-07-17). The old cluster ran an in-cluster minio; it is
-dropped. Encore's `object_storage` uses the `s3` backend pointed at the
-`statecraft-encore-object-storage` bucket, addressed by
-`OBJECT_STORAGE_S3_ACCESS_KEY_ID` / `OBJECT_STORAGE_S3_SECRET_ACCESS_KEY`
-in the catalog; rauthy backups (`RAUTHY_S3_*`) and the fleet's restic
-backups (`FLEET_S3_*`) already target Hetzner Object Storage buckets.
-Dropping minio removes a stateful pod, a 20 GB volume, and `MINIO_ROOT_*`
-from the secret surface. The rationale: with a managed S3 already in the
-picture, a self-hosted one was pure redundancy, and block storage is
-better reserved for workloads that genuinely need it (Postgres, the fleet's
-per-app volumes, prometheus). Nothing pointed at the in-cluster minio, so
-the drop is clean.
+**No identity provider and no operator UI run on this cluster.** Both are
+properties of the control-plane container (specs 009 and the substrate
+rewrite). A future service that wants either must be argued against
+thesis §3.3 and §3.4 first, not added here.
 
-### Rauthy: rebuild, do not migrate
+### Object storage
 
-Verified 2026-07-16: **rauthy has no backup.** Its `rauthy-config`
-`config.toml` is 591 bytes and contains only `[server] pub_url`; its 29
-environment variables contain no `S3`, `BACKUP`, or `BUCKET` entry; and no
-backup CronJob exists anywhere on the cluster. All state lives on the
-`data-rauthy-0` PVC and nowhere else.
+Hetzner Object Storage. Encore's `object_storage` uses the `s3` backend
+against the `statecraft-encore-object-storage` bucket, addressed by
+`OBJECT_STORAGE_S3_*`; rauthy's hiqlite backups (`RAUTHY_S3_*`) and the
+fleet's restic backups (`FLEET_S3_*`) target their own buckets. These
+buckets are a separate Hetzner service and survived the 2026-07-17
+teardown.
 
-That state is recreatable: the only account is the operator's, and every
-OIDC client id/secret (platform, both upstream providers, Grafana, the three
-sweepers) is already in the secret catalog. So rauthy is installed fresh and
-seeded from the catalog, not migrated. Reuse `RAUTHY_ENC_KEY` and
-`RAUTHY_ENC_KEY_ID` so the encryption convention carries across.
+### DNS
 
-### Cutover
+Under `statecraft.ing`: `auth` is retired with §2.1 and returns with 009
+(possibly as nothing, if the issuer moves same-origin); `grafana` is
+retired outright and its record should be removed (§6); `app` and
+`deploy` arrive with specs 009 and 006. The fleet places tenant apps
+under `deployd.xyz`. `auth` is Cloudflare-proxied while `app` is a direct
+A record to the worker, so records are not uniform and each is checked
+individually. The apex stays GitHub Pages and is not touched.
 
-DNS records to point at the new cluster once it serves: `auth`, `deploy`,
-`grafana`, and (once spec 009 lands) `app`, all under `statecraft.ing`, plus
-the fleet's `deployd.xyz`. Note that `auth` is Cloudflare-proxied while `app`
-is a direct A record to the worker, so the records are not uniform and each
-is checked individually. The apex `statecraft.ing` stays GitHub Pages and is
-not touched.
+## 5. Acceptance
 
-The old cluster was torn down first (2026-07-17), so there is **no
-blue-green rollback target**: this is a greenfield build. Until the new
-cluster serves and DNS is pointed at it, the hosts are simply down. That is
-an accepted consequence of the operator's decision that the old cluster was
-not worth keeping; the mitigation is to bring the new cluster up and verified
-before pointing DNS, not to keep a fallback.
+Met and holding:
 
-### Teardown
-
-Already done: the old cluster was deleted 2026-07-17 (2 servers, 7 CSI
-volumes, network, firewall, ssh-key, primary IPs; Hetzner project verified
-empty). The OAP `statecraft` database died with it, intentionally and without
-export. External Hetzner Object Storage buckets are a separate service and
-were preserved. (A brief reuse-in-place attempt on 2026-07-17 was reverted
-to this build-new plan before any cluster state was changed by it.)
-
-## 4. Acceptance
-
-- A cluster whose nodes are named `statecraft-hetzner-*` is Ready, and its
-  kubeconfig is the one at `~/.config/statecrafting/infra/hetzner/`.
-- Flux reconciles it from this repository; no object on the cluster
-  references `open-agentic-platform`.
+- Nodes named `statecraft-hetzner-*` are Ready, under the kubeconfig at
+  `~/.config/statecrafting/infra/hetzner/`.
+- Flux reconciles the cluster from this repository, tracking `main`; no
+  object on the cluster references `open-agentic-platform`.
 - `infra/secrets/catalog.toml` generates `.env.example`, validates a real
-  `.env`, and its SOPS-encrypted counterparts are decrypted in-cluster by
-  Flux (verified by a Secret materializing from ciphertext in git).
-- `https://auth.<domain>` serves rauthy over a valid cert, the operator's
-  admin login completes, and the seeded OIDC clients match the catalog.
-- cert-manager issues real certs for every host via the DNS-01 issuer; no
-  host serves the ingress default certificate.
-- Encore's `object_storage` reads and writes the
-  `statecraft-encore-object-storage` Hetzner bucket; no in-cluster minio
-  exists.
-- The fleet (spec 006) places an app on the new cluster and its live verbs
-  still pass, proving the cluster is a valid fleet target.
-- DNS is pointed at the new cluster and every host serves from it. (The old
-  cluster is already deleted; there is nothing left to tear down.)
+  `.env`, and its SOPS counterparts decrypt in-cluster (verified by a
+  Secret materializing from ciphertext in git).
+- cert-manager issues real certs via the DNS-01 issuer for every host the
+  cluster still serves; no host serves the ingress default certificate.
 
-## 5. Out of scope
+New with this rewrite, verified by absence and by posture:
 
-- **The control plane deployment itself.** Spec 009 targets this cluster
-  once it exists; this spec stops at the platform.
-- **Secrets at rest inside the control plane.** Verified 2026-07-16: the
-  control plane stores no secret at rest anywhere. Every CoreLedger entity
-  was inspected: `tenant`, `installation` (holds `installationId`, a public
-  identifier), `stamp_job`, and `user_account` contain no credential, and
-  `refresh_token` stores a `tokenHash`, hashed rather than encrypted, which
-  is correct because it is compared and never read back. This is by design:
-  spec 004's GitHub App flow mints short-lived installation tokens from the
-  App private key instead of storing customer credentials, which is why
-  OAP's `PAT_ENCRYPTION_KEY` has no successor here. The most secure secret
-  store is the one that does not exist.
+- No rauthy, no Grafana, and no in-cluster minio runs on the cluster. The
+  `rauthy-system` namespace is gone.
+- Prometheus is Ready, receives `remote_write`, scrapes its pull targets,
+  and is reachable only in-cluster: no Ingress and no LoadBalancer
+  Service resolves to it.
+- Every remaining Flux kustomization and HelmRelease reports Ready after
+  the prune, with no orphaned namespace and no orphaned Secret once the
+  hand-deleted `grafana-tls` leftover of §6.2 is cleared.
 
-  **This decision is conditional on App reach** (2026-07-16). It holds only
-  while the installation token can do everything the console must do: not just
-  reads and commits, but scheduling, dispatching Actions runs, and any other
-  verb the governance UI exposes. Those are App permissions (`actions: write`
-  and friends), so the condition is satisfiable by widening the App's permission
-  set, which the installation flow re-consents. If a required console verb ever
-  turns out to be reachable only with a user-supplied credential, this decision
-  reopens and the crypto service becomes real work rather than a deferred note.
-  Verifying the App's permission set covers the console's verbs is a spec 004
-  concern and a gate on that claim, not an assumption to carry silently.
+Gated on other specs, and not this spec's to close:
 
-  Should a consumer ever appear (a customer-supplied registry credential, a BYO
-  cloud credential, or a stored PAT), the mechanism is `cryptr`
-  (ChaCha20Poly1305, same author as rauthy and hiqlite, and the source of the
-  `ENC_KEYS`/`ENC_KEY_ACTIVE` versioned-key convention rauthy already uses),
-  specced then, against a real caller.
+- Encore's `object_storage` reads and writes the Hetzner bucket (009).
+- The fleet places an app on this cluster and its live verbs pass (006).
+- A real login completes against the control plane's embedded rauthy
+  (009). This replaces the previous version's `auth.<domain>` and
+  operator-admin-login acceptances, which retired with §2.1.
+
+## 6. Human checkpoints
+
+`prune: true` means merging this spec mutates a live cluster with no
+further prompt. Each of these is an operator action, proposed here rather
+than performed:
+
+1. **Approve the prune.** On merge Flux deletes the rauthy StatefulSet
+   and its PVC, the Grafana deployment and its PVC, the `rauthy-system`
+   namespace, and three Secrets. Reversible by reverting the commit,
+   except for the volumes' contents, which are: a fresh rauthy DB holding
+   one bootstrap admin, and a Grafana instance nobody ever logged into.
+2. **Verify the prune landed clean**: all tiers Ready, Prometheus still
+   Ready and still unexposed. Two leftovers are expected rather than
+   automatic. The `grafana-tls` Secret survives in the `monitoring`
+   namespace, because deleting the Ingress deletes the cert-manager
+   Certificate that owns it but cert-manager does not delete the backing
+   Secret unless `enableCertificateOwnerRef` is set; delete it by hand.
+   Confirm the Grafana PVC went with the subchart. The `rauthy-tls`
+   Secret needs no such step, since its whole namespace is removed.
+3. **Prune the operator `.env`.** Dropping the two `GRAFANA_OIDC_*` keys
+   from the catalog makes them unknown keys, so `npm run
+   secrets:validate` now fails against the live operator file until those
+   two lines are deleted from it. Confirmed by running it. The rauthy
+   keys stay and must not be removed; 009 re-encrypts from them.
+4. **Remove the `grafana.statecraft.ing` DNS record** at Cloudflare. It
+   is out-of-band, like the firewall rules; nothing in this tree manages
+   it.
+5. **Re-add firewall rules 80/443** after any `hetzner-k3s create` rerun.
+
+## 7. Out of scope
+
+- **The control plane deployment itself.** Spec 009 targets this cluster;
+  this spec stops at the substrate beneath it. That now includes the
+  embedded rauthy's secret delivery, its ingress, and the `auth.<DOMAIN>`
+  question (§2.1).
+- **The admin dashboard.** `frontend-admin` is an in-container surface
+  arriving with the substrate rewrite (thesis §3.4); the cluster provides
+  it nothing but a metrics sink it may or may not read.
+- **Alerting policy.** A later spec, not a chart default.
+- **Secrets at rest inside the control plane.** The control plane stores
+  no secret at rest: every CoreLedger entity was inspected and none holds
+  a credential, and `refresh_token` stores a hash it compares rather than
+  reads back. This is by design, because spec 004's GitHub App flow mints
+  short-lived installation tokens instead of storing customer
+  credentials, which is why OAP's `PAT_ENCRYPTION_KEY` has no successor.
+
+  **The decision is conditional on App reach.** It holds only while the
+  installation token can do everything the console must do, including
+  scheduling and dispatching Actions runs. Those are App permissions, so
+  the condition is satisfiable by widening the App's permission set, which
+  the installation flow re-consents. If a console verb turns out to need a
+  user-supplied credential, this reopens and the crypto service becomes
+  real work; verifying the App's permission set covers the console's verbs
+  is a spec 004 gate on that claim, not an assumption to carry silently.
+  Should a consumer appear, the mechanism is `cryptr`
+  (ChaCha20Poly1305, the source of the `ENC_KEYS` convention rauthy
+  already uses), specced then, against a real caller.
 - Non-hetzner targets, and multi-cluster or HA topologies.
 - Re-homing the marketing site: the apex stays GitHub Pages.

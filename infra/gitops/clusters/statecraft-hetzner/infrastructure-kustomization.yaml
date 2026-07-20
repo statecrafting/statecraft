@@ -1,9 +1,9 @@
 # Flux Kustomization: the infrastructure tier (spec 010).
 #
 # healthChecks gates Ready on the cert-manager HelmRelease ONLY (not
-# `wait: true`): rauthy/postgres/monitoring depend on SOPS Secrets that may not
-# have decrypted yet on a first reconcile, and `wait: true` would block the
-# whole tier on them. As soon as cert-manager reports Ready, the `manifests`
+# `wait: true`): postgres depends on a SOPS Secret that may not have decrypted
+# yet on a first reconcile, and `wait: true` would block the whole tier on it.
+# As soon as cert-manager reports Ready, the `manifests`
 # tier's dependsOn fires and ClusterIssuer dry-run succeeds (CRDs present).
 #
 # dependsOn namespaces (the HelmReleases install into pre-created namespaces).

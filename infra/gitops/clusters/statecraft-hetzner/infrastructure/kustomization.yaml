@@ -1,13 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# Explicit list (not auto-recursive): the vendored ../charts/rauthy tree is a
-# Helm chart referenced by rauthy.yaml, not a kustomize resource, so it must
-# never be swept into this build.
+# Explicit list, not auto-recursive. No identity provider and no operator UI
+# runs on this cluster: both are properties of the control-plane container
+# (spec 010 section 2).
 resources:
   - cert-manager.yaml
   - ingress-nginx.yaml
   - reflector.yaml
   - monitoring.yaml
-  - rauthy.yaml
   - postgres.yaml
   - nsq.yaml

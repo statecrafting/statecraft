@@ -9,21 +9,29 @@ reconciles this path from this repository; no object here references
 ```
 kustomization.yaml            root: explicit list, delegates to four tiers
 ├── flux-system/              bootstrap-managed (flux bootstrap writes it)
-├── namespaces/               cert-manager, ingress-nginx, rauthy-system,
-│                             monitoring, statecraft-system
+├── namespaces/               cert-manager, ingress-nginx, monitoring,
+│                             statecraft-system
 ├── secrets/                  SOPS-encrypted Secrets, decrypted in-cluster
 │                             by Flux from flux-system/sops-age
 ├── infrastructure/           HelmReleases + raw workloads
 │   ├── cert-manager.yaml     v1.19.3  (jetstack)
 │   ├── ingress-nginx.yaml    4.15.1   (DaemonSet + hostPort)
 │   ├── reflector.yaml        9.1.6    (emberstack)
-│   ├── monitoring.yaml       kube-prometheus-stack 86.2.2 (+ Grafana OIDC)
-│   ├── rauthy.yaml           in-tree ../charts/rauthy (image 0.35.0)
+│   ├── monitoring.yaml       kube-prometheus-stack 86.2.2, Grafana off
 │   ├── postgres.yaml         raw StatefulSet, postgres:17 (born empty)
 │   └── nsq.yaml              raw Deployment, nsqio/nsq:v1.3.0
-├── manifests/                ClusterIssuers (DNS-01 default + HTTP-01)
-└── charts/rauthy/            vendored rauthy chart (referenced by rauthy.yaml)
+└── manifests/                ClusterIssuers (DNS-01 default + HTTP-01)
 ```
+
+## What does not run here
+
+No identity provider and no operator UI. Embedded rauthy in the
+control-plane container is the platform IdP and the flag-gated
+`frontend-admin` is the platform's observability surface (spec 001
+sections 3.3 and 3.4), so the cluster rauthy and cluster Grafana were both
+retired in the spec 010 rewrite. Prometheus stays as an unexposed metrics
+sink with no ingress and no identity. Adding either back is a thesis
+argument before it is a manifest.
 
 ## Ordering
 
