@@ -253,20 +253,13 @@ function validateEnv(catalog: CatalogKey[], env: Map<string, string>): string[] 
     }
   }
 
-  // Derived agreement.
-  const domain = env.get("DOMAIN") ?? "";
-  if (domain) {
-    const expect: Record<string, string> = {
-      APP_BASE_URL: `https://${domain}`,
-      RAUTHY_URL: `https://auth.${domain}`,
-    };
-    for (const [name, want] of Object.entries(expect)) {
-      const got = env.get(name);
-      if (got !== undefined && got !== want) {
-        errors.push(`derived key ${name} is "${got}" but should be "${want}"`);
-      }
-    }
-  }
+  // Derived agreement. Nothing to check today: the two DOMAIN-derived URL keys
+  // (APP_BASE_URL and RAUTHY_URL) were dropped from the catalog on 2026-07-20,
+  // because no code reads either and the rauthy issuer is same-origin, derived
+  // in-container from ENRAHITU_PUBLIC_URL rather than supplied (spec 010
+  // section 2.1, spec 009 section 2.4). The surviving derived key,
+  // FLEET_IMAGE_PULL_SECRET, is a base64 dockerconfigjson with no formula this
+  // validator can restate. Reinstate a formula table here if one returns.
 
   return errors;
 }

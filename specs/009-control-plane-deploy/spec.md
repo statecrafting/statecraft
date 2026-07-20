@@ -198,13 +198,24 @@ Against the catalog, the embedded topology settles as follows.
   `WEBAPP_BASE_URL` and `FRONTEND_URL`. `OIDC_SPA_CLIENT_ID`, `OIDC_M2M_CLIENT_ID`, and
   `OIDC_M2M_CLIENT_SECRET` are OAP names with no consumer in this codebase.
 
-**The catalog edit is proposed, not performed here.** `infra/secrets/catalog.toml`
-is spec 010 territory. Pruning roughly a dozen keys from a live operator `.env`
-is a cluster-secret change with its own validation gate (`npm run
-secrets:validate` fails on unknown keys), and 010 section 2.1 asserted these
-keys were required. Resolving that contradiction by editing the catalog from
-inside this spec is exactly the move the coherence guard forbids. It is raised
-as human checkpoint 1 (section 6).
+**The catalog edit was proposed here and performed in 010.**
+`infra/secrets/catalog.toml` is spec 010 territory. Pruning roughly a dozen
+keys from a live operator `.env` is a cluster-secret change with its own
+validation gate (`npm run secrets:validate` fails on unknown keys), and 010
+section 2.1 asserted these keys were required. Resolving that contradiction by
+editing the catalog from inside this spec is exactly the move the coherence
+guard forbids, so it was raised as human checkpoint 1 (section 6).
+
+**Resolved 2026-07-20.** The operator decided the contradiction in favor of the
+verified image behavior and authorized amending spec 010 rather than retaining
+the keys. Spec 010 section 2.1 now carries the amendment and the per-key
+decision: fourteen keys dropped, the four `JWT_*` PEMs and
+`RAUTHY_CLIENT_SECRET` kept but demoted to `required = false` with their local
+run named as the consumer (they cannot be dropped, because `npm run
+secrets:check` requires every `infra.config.json` secret to be catalogued), and
+`RAUTHY_S3_*` plus the SMTP group kept against the named gaps of section 4.8.
+The catalog went from 47 keys to 33. Checkpoint 1 is closed; pruning the live
+operator `.env` moved to 010's own checkpoint 6.
 
 ### 2.4 `auth.statecraft.ing` does not return
 
@@ -224,6 +235,14 @@ Consequences: the issuer is `https://app.statecraft.ing/auth/v1/`; the
 catalog's `RAUTHY_URL` is redefined from `https://auth.<DOMAIN>` to
 `https://<APP_HOST>/auth/v1/` or dropped as derived; and the `auth`
 DNS record should be removed rather than repointed (checkpoint 4).
+
+**Settled 2026-07-20: dropped, not redefined.** Of the two options above, spec
+010 section 2.1 took the second. `RAUTHY_URL` had no consumer (no code reads
+it, and the entrypoint derives the issuer from `ENRAHITU_PUBLIC_URL`), so
+keeping it would restate in a settable variable a value the container computes
+for itself. `APP_BASE_URL` was dropped with it, and the validator's
+`https://auth.<DOMAIN>` derived-agreement formula went with both. Checkpoint 4,
+the DNS record removal, is unaffected and still outstanding.
 
 **Noted, and accepted:** the rauthy admin UI is publicly reachable at
 `https://app.statecraft.ing/auth/v1/admin`, protected by rauthy's own login.
@@ -265,8 +284,10 @@ successor task. Platform observability is the in-substrate flag-gated
 
 **Cross-spec touches**, each requiring a coordinated edit or a cited waiver:
 `infra.config.json` (spec 002) needs a production origin and a metrics block
-(sections 4.2, 4.7); `infra/secrets/catalog.toml` (spec 010) needs the pruning
-of section 2.3 and the `RAUTHY_URL` redefinition of section 2.4.
+(sections 4.2, 4.7). `infra/secrets/catalog.toml` (spec 010) needed the pruning
+of section 2.3 and the `RAUTHY_URL` decision of section 2.4; **both landed
+2026-07-20** in spec 010 section 2.1, on operator authorization, as a 010-owned
+edit rather than a cross-spec touch from here.
 
 ## 4. Behavior
 
@@ -561,15 +582,17 @@ database with it.
 
 Live bring-up is operator work, proposed here rather than performed.
 
-1. **Decide the catalog pruning.** Section 2.3 finds that roughly a dozen
-   catalog keys lost their consumer, contradicting spec 010 section 2.1's
-   statement that every `RAUTHY_*` key is still required. The catalog is 010
-   territory and its validator fails on unknown keys, so this needs a decision
-   on whether 010 is amended or the keys are retained as documentation of
-   material the operator still holds. Not resolved from inside this spec.
+1. **Decide the catalog pruning. CLOSED 2026-07-20.** Section 2.3 found that
+   roughly a dozen catalog keys lost their consumer, contradicting spec 010
+   section 2.1's statement that every `RAUTHY_*` key is still required. The
+   operator decided to amend 010 to the verified image behavior rather than
+   retain the keys, and the amendment landed in 010 section 2.1 with the
+   per-key decision (section 2.3 above). What remains is operator work on the
+   live `.env`, tracked as 010 checkpoint 6, not a decision.
 2. **Delete the two `GRAFANA_OIDC_*` lines** from the operator `.env`, which
-   is spec 010 checkpoint 3 and still outstanding: they are the only delta
-   between the live `.env` and the catalog today.
+   is spec 010 checkpoint 3. **Done:** `npm run secrets:validate` was green
+   against the live file on 2026-07-20 before the catalog amendment, which is
+   only possible with both lines gone.
 3. **Confirm `ENRAHITU_PUBLIC_URL` before the first boot.** Section 4.3 rule
    3; the cheapest checkpoint here and the most expensive to miss.
 4. **Remove the `auth.statecraft.ing` DNS record** (section 2.4) and add the

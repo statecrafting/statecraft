@@ -22,7 +22,13 @@ summary: >
   unexposed in-cluster metrics sink. What stands: the Flux tree, SOPS,
   cert-manager, ingress-nginx, reflector, Postgres, NSQ, and Hetzner
   Object Storage. The cluster is live (PRs #27-#29); this rewrite is the
-  first change that prunes services from it.
+  first change that prunes services from it. Amended 2026-07-20 on
+  explicit operator authorization, closing spec 009 checkpoint 1: the
+  claim that every `RAUTHY_*` key survives the move into the container is
+  corrected to the verified image behavior, which self-seeds its own
+  identity. The catalog goes from 47 keys to 33, `auth.<DOMAIN>` is
+  settled as not returning, and the six keys a deploy genuinely owes the
+  container are named.
 ---
 
 # 010: The statecraft cluster
@@ -76,31 +82,112 @@ secrets that fed it (`rauthy-secrets`, `rauthy-smtp-secret`). The
 previous spec's "rauthy: rebuild, do not migrate" decision is void, because
 there is nothing here to rebuild.
 
-**What stays:** the key material. The IdP moved; it did not disappear.
-Every `RAUTHY_*` key the catalog declares is still required, now by the
-embedded rauthy inside the control-plane container: the hiqlite Raft and
-API secrets, the bootstrap admin password, the `ENC_KEYS` pair, the SMTP
-group, the upstream OAuth provider groups, the S3 backup credentials, and
-the admin token the seed job uses. Their catalog `consumer` annotations
-are restated to name the control-plane container instead of a cluster
-service. Their **delivery** (a Secret in the control-plane namespace,
-shaped to whatever the control-plane chart expects) belongs to spec 009,
-which re-encrypts them from the operator `.env`. That file is the origin
-of record for key material, so deleting the ciphertext here loses
-nothing.
+**What stays: amended 2026-07-20, and this is the correction.** This spec
+originally claimed that "every `RAUTHY_*` key the catalog declares is
+still required, now by the embedded rauthy inside the control-plane
+container", and delegated delivery to spec 009. Spec 009's rewrite then
+verified the published image and found the premise false, raising the
+contradiction as its checkpoint 1 rather than resolving it from outside
+010's territory. **The operator decided on 2026-07-20 to amend this spec
+to the verified image behavior.** That authorization is what makes this
+edit legitimate; absent it, editing an owning spec to match what the code
+turned out to do is precisely what the coherence guard forbids.
+
+The IdP did not just move: it became **self-founding**. `first-boot.mjs`
+generates both RS256 keypairs, the OIDC client secret, the rauthy
+bootstrap admin password, `ENC_KEYS` / `ENC_KEY_ACTIVE`, rauthy's hiqlite
+Raft and API secrets, and the app's own hiqlite secrets into the `/data`
+volume, and the entrypoint then **unconditionally exports** five of them
+(`JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY`, `JWT_REFRESH_PRIVATE_KEY`,
+`JWT_REFRESH_PUBLIC_KEY`, `RAUTHY_CLIENT_SECRET`) from `/data` in the same
+shell that starts the app. Delivering those five through a Secret is not
+redundant, it is a **silent no-op**: the injected value is overwritten
+before the app reads it, so the Secret reads as configured while having no
+effect. The rest were never wired into the image at all.
+
+So the catalog is pruned from 47 keys to 33, decided per key rather than
+by category:
+
+- **Dropped, because the container mints them and delivery is impossible
+  (7):** `RAUTHY_RAFT_SECRET`, `RAUTHY_API_SECRET`,
+  `RAUTHY_ADMIN_PASSWORD`, `RAUTHY_ENC_KEY_ID`, `RAUTHY_ENC_KEY`,
+  `HIQLITE_SECRET_RAFT`, `HIQLITE_SECRET_API`.
+- **Dropped, fixed by the chassis (1):** `RAUTHY_CLIENT_ID`. The
+  entrypoint hardcodes the client id `enrahitu`; a catalog key cannot
+  change it.
+- **Dropped, no consumer anywhere in the tree (6):** `SESSION_SECRET`
+  (an OAP leftover that no file in this repository reads),
+  `OIDC_SPA_CLIENT_ID`, `OIDC_M2M_CLIENT_ID`, `OIDC_M2M_CLIENT_SECRET`
+  (OAP names), and the two derived URLs `APP_BASE_URL` and `RAUTHY_URL`
+  (below).
+- **Kept, declared for Encore and satisfied in-container (5):** the four
+  `JWT_*` PEMs and `RAUTHY_CLIENT_SECRET`. They cannot be dropped even
+  though the deploy must not send them: `infra.config.json` declares all
+  eleven Encore secrets and `npm run secrets:check` fails on any that is
+  absent from the catalog. They are also genuinely consumed by a **local**
+  run, where `npm run generate-keys` and `npm run dev:idp-secret` write
+  the files that `backend/lib/secrets.ts` falls back to. They are now
+  `required = false` with that consumer restated, and the catalog states
+  that injecting them is forbidden.
+- **Kept, held against a named upstream gap (7):** `RAUTHY_S3_*` and the
+  SMTP group. Neither is exported by the entrypoint, so the embedded
+  rauthy has no backup target and no mail transport (spec 009 section
+  4.8, items 1 and 2). They are kept rather than dropped because the
+  operator holds provisioned credentials, the gap has a named owner in
+  the enrahitu chassis, and their absence is a **capability loss** rather
+  than material the image supersedes. `RAUTHY_S3_*` becomes an optional
+  all-or-nothing group so the catalog stops claiming the platform
+  requires what nothing reads.
+- **Kept, and the only rauthy keys with a live consumer (3):** the
+  `GITHUB_UPSTREAM_*` pair and `RAUTHY_ADMIN_TOKEN`, the credentials of
+  the seeder Job. Their consumer is restated as that Job and its own
+  Secret, never the app pod (spec 009 §4.5). `RAUTHY_ADMIN_TOKEN`'s
+  description is narrowed to match: the seeder needs the API only for the
+  upstream provider, since the OIDC client is seeded declaratively at
+  first boot and scopes are not converged at all. It is demoted to
+  `required = false` because `first-boot.mjs` does not yet compose
+  `api_keys.json` (spec 009 §4.8 item 3), so rauthy has not handed the
+  value back yet.
+- **Kept, held (2):** the `GOOGLE_UPSTREAM_*` group. Spec 009 §4.5
+  specifies a seeder that converges the GitHub provider only, so this
+  pair has no consumer until a second provider is converged. It is held
+  on the same reasoning as the SMTP group rather than counted as live.
+
+Six keys, and only six, are genuinely required from a deploy and belong
+on the pod Secret: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_B64`,
+`GITHUB_WEBHOOK_SECRET`, `RESTIC_PASSWORD`, `FLEET_S3_ACCESS_KEY_ID`,
+`FLEET_S3_SECRET_ACCESS_KEY`. Their **delivery** still belongs to spec
+009. The operator `.env` remains the origin of record for the material it
+still names, so deleting rauthy ciphertext from this tree still loses
+nothing; there is simply far less to re-encrypt than this spec once
+assumed (section 4).
 
 **Cost, accepted:** `auth.statecraft.ing` stops serving when this merges.
 Nothing consumes it. The rauthy on this cluster is fresh, carries no
 seeded OIDC clients (client seeding was always spec 009's seeder pass),
-and the control plane it would authenticate for is not deployed. The host
-returns with 009.
+and the control plane it would authenticate for is not deployed. This
+spec originally expected the host to return with 009; the amendment below
+settles that it does not.
 
-**Handed to 009, not pre-empted here:** whether `auth.<DOMAIN>` survives
-as a distinct host at all. The embedded rauthy is reached through the
-app's own same-origin `/auth/v1` proxy (spec 007), so the control plane
-may serve the issuer at `https://<DOMAIN>/auth/v1/` and leave `auth.`
-vestigial. `RAUTHY_URL` therefore keeps its current definition
-(`https://auth.<DOMAIN>`) until 009 decides; this spec does not guess.
+**Handed to 009, and now settled: `auth.<DOMAIN>` does not survive.**
+This spec declined to guess whether `auth.` remained a distinct host.
+Spec 009 section 2.4 answered it structurally rather than by preference:
+the entrypoint sets `RAUTHY_ISSUER="$PUBLIC_URL/auth/v1/"`, gives rauthy
+`PUB_URL` equal to the app's own host under `PROXY_MODE=true`, and binds
+it to loopback where only the app's proxy can reach it. The whole rauthy
+surface is served same-origin below `https://app.statecraft.ing/auth/`,
+and a second host could only mint a second issuer identity for one IdP.
+
+`RAUTHY_URL` is therefore **dropped rather than redefined**, which is the
+option 009 section 2.4 left open. It had no consumer: no code reads it,
+and the issuer the app actually uses is derived in-container from
+`ENRAHITU_PUBLIC_URL`, not supplied by the operator. Keeping it as
+`https://<APP_HOST>/auth/v1/` would restate in a settable variable a value
+the container computes for itself, which is the drift this amendment is
+removing. `APP_BASE_URL` goes with it for the same reason: it claimed the
+consumer "app, rauthy redirect", and the app reads `WEBAPP_BASE_URL` and
+`FRONTEND_URL` instead. The stale `https://auth.<DOMAIN>` formula is
+removed from the validator's derived-agreement check along with them.
 
 ### 2.2 Grafana is dropped; Prometheus is kept, demoted
 
@@ -252,12 +339,32 @@ each value. **It holds no values.** From it:
   `flux-system` and never committed; the public key is committed so any
   operator can encrypt.
 
-**The operator `.env` is the origin of record for key material.** The four
-`JWT_*` RS256 PEMs are minted once by `npm run generate-keys`, written
-there beside every other operator secret, declared in the catalog, and
-delivered to the cluster through SOPS like the rest. That origin is what
-lets §2.1 delete rauthy ciphertext from the tree without losing anything:
-009 re-encrypts from the same file.
+**The operator `.env` is the origin of record for the material the
+platform still needs from an operator**, which after §2.1 is a much
+smaller set: the cluster and provider credentials, the six keys the pod
+Secret carries, and the seeder's three. That origin is what lets §2.1
+delete rauthy ciphertext from the tree without losing anything.
+
+**It is no longer the origin of the signing keys.** This spec previously
+held that the four `JWT_*` RS256 PEMs are "minted once by `npm run
+generate-keys`, written there beside every other operator secret, and
+delivered to the cluster through SOPS like the rest". The container mints
+its own on first boot and the entrypoint overwrites whatever was
+delivered, so the SOPS path for them leads nowhere. `npm run
+generate-keys` survives as a real prerequisite for a **local** run
+against a working tree, which is the only claim the catalog now makes for
+those keys. The PEMs already sitting in the operator `.env` are harmless
+to keep and are no longer required; what matters is that they never reach
+the pod.
+
+**The `/data` volume, not this file, is the identity plane.** Everything
+the platform is (both keypairs, the client secret, rauthy's encryption
+keys, and rauthy's entire hiqlite database of users, roles, and clients)
+is generated in-container and exists nowhere else. It is not
+reconstructible from SOPS ciphertext in git the way the retired
+shared-rauthy topology was. Spec 009 section 4.3 carries the operational
+rules that follow; the consequence for this spec is that no amount of
+secret delivery can re-found a lost volume.
 
 ### Platform services
 
@@ -297,13 +404,15 @@ teardown.
 
 ### DNS
 
-Under `statecraft.ing`: `auth` is retired with §2.1 and returns with 009
-(possibly as nothing, if the issuer moves same-origin); `grafana` is
-retired outright and its record should be removed (§6); `app` and
-`deploy` arrive with specs 009 and 006. The fleet places tenant apps
-under `deployd.xyz`. `auth` is Cloudflare-proxied while `app` is a direct
-A record to the worker, so records are not uniform and each is checked
-individually. The apex stays GitHub Pages and is not touched.
+Under `statecraft.ing`: `auth` is retired with §2.1 and **does not
+return**, since the issuer moved same-origin (§2.1, spec 009 §2.4); its
+record should be removed rather than repointed, which is spec 009's
+checkpoint 4. `grafana` is retired outright and its record should be
+removed (§6); `app` and `deploy` arrive with specs 009 and 006. The fleet
+places tenant apps under `deployd.xyz`. The retired `auth` record is
+Cloudflare-proxied while `app` is a direct A record to the worker, so
+records are not uniform and each is checked individually. The apex stays
+GitHub Pages and is not touched.
 
 ## 5. Acceptance
 
@@ -315,7 +424,10 @@ Met and holding:
   object on the cluster references `open-agentic-platform`.
 - `infra/secrets/catalog.toml` generates `.env.example`, validates a real
   `.env`, and its SOPS counterparts decrypt in-cluster (verified by a
-  Secret materializing from ciphertext in git).
+  Secret materializing from ciphertext in git). After the §2.1 amendment
+  the validation half is **gated on checkpoint 6**: `secrets:validate`
+  fails on fourteen unknown keys until the operator prunes them from the
+  live file. `secrets:check` and `secrets:example` stay green.
 - cert-manager issues real certs via the DNS-01 issuer for every host the
   cluster still serves; no host serves the ingress default certificate.
 
@@ -357,15 +469,45 @@ than performed:
    Secret unless `enableCertificateOwnerRef` is set; delete it by hand.
    Confirm the Grafana PVC went with the subchart. The `rauthy-tls`
    Secret needs no such step, since its whole namespace is removed.
-3. **Prune the operator `.env`.** Dropping the two `GRAFANA_OIDC_*` keys
-   from the catalog makes them unknown keys, so `npm run
-   secrets:validate` now fails against the live operator file until those
-   two lines are deleted from it. Confirmed by running it. The rauthy
-   keys stay and must not be removed; 009 re-encrypts from them.
+3. **Prune the operator `.env` of the two `GRAFANA_OIDC_*` keys.**
+   **Done.** `npm run secrets:validate` was green against the live
+   operator file on 2026-07-20 before the §2.1 amendment, which is only
+   possible with those two lines gone. Its instruction that "the rauthy
+   keys stay and must not be removed" is superseded by checkpoint 6.
 4. **Remove the `grafana.statecraft.ing` DNS record** at Cloudflare. It
    is out-of-band, like the firewall rules; nothing in this tree manages
    it.
 5. **Re-add firewall rules 80/443** after any `hetzner-k3s create` rerun.
+6. **Prune the operator `.env` of the fourteen keys §2.1 dropped.**
+   Deleting a key from the catalog makes it an unknown key, so
+   `npm run secrets:validate` fails against the live operator file until
+   the matching lines are deleted from it. Run against the real `.env` on
+   2026-07-20, immediately after the amendment, it reports exactly
+   fourteen `unknown key not in catalog` errors and nothing else:
+   `APP_BASE_URL`, `RAUTHY_URL`, `SESSION_SECRET`, `RAUTHY_RAFT_SECRET`,
+   `RAUTHY_API_SECRET`, `RAUTHY_ADMIN_PASSWORD`, `RAUTHY_ENC_KEY_ID`,
+   `RAUTHY_ENC_KEY`, `HIQLITE_SECRET_RAFT`, `HIQLITE_SECRET_API`,
+   `OIDC_SPA_CLIENT_ID`, `OIDC_M2M_CLIENT_ID`, `OIDC_M2M_CLIENT_SECRET`,
+   `RAUTHY_CLIENT_ID`. That the error set matches the dropped set exactly,
+   with no missing-required error, is the evidence that the amendment
+   removed only keys the live file could afford to lose.
+
+   Deleting them destroys the only copy of material the platform no
+   longer uses (a retired cluster rauthy's `ENC_KEYS`, its hiqlite
+   secrets, and its bootstrap admin password). Nothing can read them
+   again: the rauthy they belonged to was pruned by §2.1 and its volume
+   went with it. This is an operator action precisely because it is
+   irreversible, and it is safe to defer: the file simply fails
+   validation until it is done.
+
+   `npm run secrets:check`, the CI gate, stays green throughout, because
+   all eleven `infra.config.json` secrets remain catalogued.
+
+7. **Do not carry the dropped keys into the pod Secret.** The five
+   `JWT_*` / `RAUTHY_CLIENT_SECRET` values that stay in the catalog are
+   the ones the entrypoint overwrites. Spec 009's acceptance verifies
+   this by absence; it is repeated here because this catalog is where an
+   operator would go looking for "what the deploy needs".
 
 ## 7. Out of scope
 
