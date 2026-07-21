@@ -918,6 +918,54 @@ Retiring the OAP release is not this spec's acceptance: the old cluster was
 deleted wholesale by spec 010 on 2026-07-17, taking the release and its
 database with it.
 
+### 5.1 Bring-up outcome, 2026-07-21
+
+First boot succeeded. The control plane is live at `https://app.statecraft.ing`
+against its own born-empty database, and the identity plane is founded: both
+RS256 keypairs, the OIDC client secret, the bootstrap admin password, and an
+initialized rauthy hiqlite database all exist under `/data`.
+
+**Met, each verified against the live system rather than by inspection:**
+
+| Acceptance item | Evidence |
+|---|---|
+| Serves over a real cert | 200, Let's Encrypt `CN=app.statecraft.ing` |
+| OIDC issuer, no `auth` host | issuer `https://app.statecraft.ing/auth/v1/`; `auth.statecraft.ing` NXDOMAIN |
+| Secret carries exactly nine keys | nine present, all five discarded keys absent |
+| Metrics by `remote_write` | `e_requests_total`, `e_sys_memory_used_bytes`, `env_name=selfhost`, ~17s fresh |
+| Volume backup exists | restic snapshot `779acd3e`, 7.718 MiB, taken with the pod holding the volume |
+| Upstream provider seeded | `GET /auth/v1/providers/minimal` returns the GitHub provider |
+
+**Not met, and not to be read as nearly met:**
+
+- **A real login has not completed end to end**, so spec 010's deferred
+  acceptance stays deferred, and the `statecraft_operator` claim has not been
+  observed reaching the app's user model (checkpoint 5).
+- **Fail-loud has never been exercised.** Section 4.2's promise that a missing
+  key crash-loops the pod is still a reasoned claim about
+  `metadata.cloud: hetzner`, not an observation. It calls for verifying "once,
+  deliberately, before go-live", and that deliberate test has not been run.
+- **No restore has been rehearsed.** A snapshot existing is not a restore, and
+  this spec's own section 4.3 says the rehearsal is the test of whether
+  crash-consistency suffices.
+- **`ai-pr-review.yml` does not exist**, so that line cannot be claimed.
+- **Mail is off** (section 4.8 item 1, reopened), which blocks checkpoint 6.
+
+**Three defects blocked first boot, and none was caught by any gate.** Each is
+recorded where it belongs (4.8 item 5, 4.4, and 4.8 item 1) rather than
+summarized away: a port-less `RP_ORIGIN` that made rauthy panic before serving,
+a gate-config path aimed at the volume instead of the image, and an SMTP
+transport that was unreachable from this network. The first cost seventeen
+hours of `CrashLoopBackOff`; the third cost a second outage roughly fifty
+minutes after a rollout that looked healthy.
+
+The common shape is worth stating once, because it is the argument for the
+successor task in 4.8 item 5: **every one of these shipped green.** The image
+built, the manifests passed server-side admission, the coupling gate was
+satisfied, and the statecraft tier sets `wait: false` by design, so Flux
+reported Ready while the pod never became so. This repo still has no gate that
+fails when the published image cannot start.
+
 ## 6. Human checkpoints
 
 Live bring-up is operator work, proposed here rather than performed.
@@ -937,14 +985,32 @@ Live bring-up is operator work, proposed here rather than performed.
    3; the cheapest checkpoint here and the most expensive to miss.
 4. **Remove the `auth.statecraft.ing` DNS record** (section 2.4) and add the
    `app` A record to the worker IP. Out-of-band at Cloudflare, like the
-   firewall rules.
+   firewall rules. **CLOSED 2026-07-21:** `app.statecraft.ing` resolves to the
+   worker and `auth.statecraft.ing` is NXDOMAIN, both verified live.
 5. **Grant `statecraft_operator`** to the first operator account, and confirm
-   the claim reaches the app.
+   the claim reaches the app. **Partially done 2026-07-21:** the GitHub
+   upstream provider and the `statecraft_operator` role were both created by
+   hand through the admin UI, which is the section 4.5 fallback rather than the
+   seeder Job. The provider is confirmed live by
+   `GET /auth/v1/providers/minimal`. **The grant and the claim check remain
+   open**, and they are the substance of this checkpoint: creating a role is
+   provisioning, granting it is the authorization decision, and observing it in
+   the app's user model is what proves the claim path works end to end.
 6. **Take custody of the break-glass admin credential** (section 4.6): read it
    from the volume, rotate it to a named account with MFA, and record where it
-   lives.
+   lives. **BLOCKED 2026-07-21** on section 4.8 item 1: with mail disabled,
+   rauthy cannot deliver the enrolment or verification messages a named MFA
+   account needs. Custody today is the generated password at
+   `/data/rauthy/admin-password`, reachable only by `kubectl exec`. This
+   checkpoint cannot close before SMTP does.
 7. **Verify the volume backup and rehearse a restore** before the platform
-   holds anything real (section 4.3 rule 2).
+   holds anything real (section 4.3 rule 2). **Half done 2026-07-21.** The
+   backup is verified: snapshot `779acd3e`, 7.718 MiB across 18 files, written
+   while the app pod held the volume, which is the co-mounted case that matters
+   and the one an earlier run did not actually exercise. **The restore rehearsal
+   is still outstanding**, and it is the half that carries the meaning: a
+   snapshot proves the job runs, only a restore proves the snapshot is a
+   platform.
 
 ## 7. Out of scope
 
