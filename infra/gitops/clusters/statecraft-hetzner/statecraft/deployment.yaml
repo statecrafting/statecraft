@@ -43,12 +43,12 @@ spec:
         - name: statecraft
           # Pinned by digest, never `:latest`. The tag is recorded alongside
           # for human legibility only; the digest is what is deployed.
-          # tag: a998732 (009-rauthy-rp-origin-port, 2026-07-21) - gives rauthy
-          # an RP_ORIGIN carrying an explicit port. The prior digest (740c7847,
-          # built from c475934) could not start at all: rauthy panicked on the
-          # port-less origin before serving, and the pod logged 214 restarts
-          # over 17 hours. See spec 009 section 4.8 item 5.
-          image: ghcr.io/statecrafting/statecraft@sha256:e9c146dcc3cdcebbfff811b70dbb92aebf20613b84f020e23479bb627357b553
+          # tag: 2e3c9d7 (009-smtp-starttls, 2026-07-21) - forwards
+          # SMTP_STARTTLS_ONLY so port 587 is usable, which the SMTP env below
+          # depends on. The prior digest (e9c146dc, built from a998732) booted
+          # but could only reach an implicit-TLS mail port (465), which Hetzner
+          # blocks; see spec 009 section 4.8 item 1.
+          image: ghcr.io/statecrafting/statecraft@sha256:baf417288582e1735218799879241383c6fe476f65f305f9483fe390ee66d820
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -79,26 +79,34 @@ spec:
             - name: ENRAHITU_LEDGER_URL
               value: "postgres://statecraft:$(POSTGRES_PASSWORD)@postgresql.statecraft-system:5432/statecraft"
             # ---------------------------------------------------------------
-            # SMTP is DISABLED, and this is load-bearing rather than a
-            # simplification. rauthy's create_mailer panics with "SMTP
-            # connection retries exceeded" when the transport is unreachable
-            # (src/data/src/email/mailer.rs:230), and the entrypoint supervises
-            # die-together, so an unreachable mail server is a whole-platform
-            # crash loop rather than a lost capability.
+            # SMTP for the embedded rauthy (spec 009 section 4.8 item 1). Four
+            # non-secret values here; SMTP_PASSWORD arrives via envFrom below.
             #
-            # The reachable configuration needs a chassis change this repo
-            # cannot make from a manifest. Hetzner blocks outbound 465 and 25
-            # from the cluster (verified from a pod: 465 BLOCKED, 587 OPEN, 25
-            # BLOCKED, 443 OPEN), so only 587 is usable, and 587 requires
-            # SMTP_STARTTLS_ONLY because rauthy otherwise builds an implicit-TLS
-            # `relay()`. The entrypoint forwards exactly five SMTP_* variables
-            # and drops a sixth, so honoring it needs a rebuilt image.
+            # Port 587 with SMTP_STARTTLS_ONLY, NOT 465. Hetzner blocks outbound
+            # 465 and 25 from the cluster (465 BLOCKED, 587 OPEN, 25 BLOCKED,
+            # 443 OPEN, verified from a pod), so 587 is the only reachable port.
+            # rauthy builds an implicit-TLS `relay()` and only speaks STARTTLS
+            # when starttls_only is set, so 587 without that flag fails the
+            # handshake. The flag is forwarded by the entrypoint from the digest
+            # pinned above (2e3c9d7); an earlier image dropped it, which is why
+            # this env depends on that specific image.
             #
-            # Omitting SMTP_URL is the entrypoint's supported mail-disabled
-            # path, so this boots cleanly. Section 4.8 item 1 is REOPENED.
-            # SMTP_PASSWORD stays in the Secret: it is not entrypoint-discarded,
-            # it is unread until the group returns.
+            # Getting this wrong is not a lost feature but an OUTAGE: rauthy's
+            # create_mailer panics once its connect retries are exhausted
+            # (src/data/src/email/mailer.rs), and the entrypoint supervises
+            # die-together, so an unreachable mailer crash-loops the container
+            # roughly a minute after it otherwise looked healthy.
             # ---------------------------------------------------------------
+            - name: SMTP_URL
+              value: "smtp.gmail.com"
+            - name: SMTP_PORT
+              value: "587"
+            - name: SMTP_STARTTLS_ONLY
+              value: "true"
+            - name: SMTP_USERNAME
+              value: "bartekus@gmail.com"
+            - name: SMTP_FROM
+              value: "Admin <admin@statecraft.ing>"
             # ---------------------------------------------------------------
             # rauthy's native hiqlite S3 backup (spec 009 section 4.8 item 2,
             # closed 2026-07-20). This is the only QUIESCED backup of the

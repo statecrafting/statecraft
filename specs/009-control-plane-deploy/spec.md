@@ -602,41 +602,33 @@ lowercase spelling survives in a doc comment at `backend/governance/config.ts:16
 (spec 008 territory, comment only, no behavior); worth correcting there when
 that file is next touched.
 
-**Read by the embedded rauthy, set by the deploy (added 2026-07-20):**
-`SMTP_URL`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_FROM`. These four are
-non-secret and travel as plain env; the fifth, `SMTP_PASSWORD`, is a key of
-the pod Secret (section 2.2).
+**Read by the embedded rauthy, set by the deploy:** `SMTP_URL`, `SMTP_PORT`,
+`SMTP_STARTTLS_ONLY`, `SMTP_USERNAME`, `SMTP_FROM`. These five are non-secret
+and travel as plain env; the sixth, `SMTP_PASSWORD`, is a key of the pod Secret
+(section 2.2). They are consumed by rauthy, not by any Encore service, which is
+why they appear here rather than in `infra.config.json`. The entrypoint forwards
+the whole group into the rauthy subshell only when `SMTP_URL` is set, so
+omitting it is a supported configuration that disables mail rather than a
+failure (section 4.8 item 1).
 
-**`SMTP_PORT` must be 465, not 587, corrected live 2026-07-21.** rauthy builds
-its transport with lettre's `relay()`, which opens TLS immediately, and only
-uses `starttls_relay()` when `starttls_only` is set. Against gmail's STARTTLS
-port 587 it therefore wrapped TLS around a listener that answers in plaintext
-and failed the handshake with `InvalidMessage(InvalidContentType)`, logged at
-boot as "Could not connect to smtp.gmail.com via TLS. Check credentials". The
-credentials were fine; the message misattributes a transport mismatch.
+**`SMTP_PORT` is 587 with `SMTP_STARTTLS_ONLY=true`, and both halves are
+load-bearing.** This settled over three edits on 2026-07-21, and the reasoning
+is worth keeping because two plausible configurations are wrong here for
+different reasons. rauthy builds its transport with lettre's `relay()`, which
+opens implicit TLS and needs an implicit-TLS port (465); it speaks STARTTLS on
+587 only when `starttls_only` is set. So 587 **without** the flag fails the
+handshake against gmail's plaintext greeting (`InvalidMessage(InvalidContentType)`,
+misreported at boot as "Check credentials"), and 465 **with** correct TLS is
+unreachable, because Hetzner blocks outbound 465 and 25 from this cluster (465
+BLOCKED, 587 OPEN, 25 BLOCKED, verified from a pod). Only 587-plus-STARTTLS is
+both well-formed and reachable. Forwarding `SMTP_STARTTLS_ONLY` was the spec 002
+fourth hunk; it needed a rebuilt image, which is why section 4.8 item 1 tracks
+the whole arc.
 
-`SMTP_STARTTLS_ONLY=true` on port 587 is the equally valid configuration, and
-it was not chosen for a mechanical reason worth recording: the entrypoint
-forwards exactly five `SMTP_*` variables into the rauthy subshell, so a sixth
-would be ignored until a chassis change and a rebuilt image landed. The port is
-a manifest edit that needs neither.
-
-**Superseded within a day, 2026-07-21: the group is now unset entirely.** Port
-465 is correct for rauthy's TLS mode and unreachable from this cluster, because
-Hetzner blocks outbound 465 and 25 while leaving 587 open. The reachable
-configuration is 587 with `SMTP_STARTTLS_ONLY`, which the entrypoint cannot
-forward, so SMTP is disabled until that chassis change lands. Section 4.8 item
-1 carries the evidence and is reopened.
-
-The claim this paragraph originally made, that a wrong SMTP setting "costs a
-redeploy, never a re-founding", was half wrong and worth keeping visible: an
-unreachable transport makes rauthy panic after its retry budget, so it costs an
-**outage**, roughly fifty minutes after a rollout that looked healthy. Only the
-re-founding half survives. The entrypoint forwards all five into the
-rauthy subshell only when `SMTP_URL` is set, so omitting the group is a
-supported configuration that disables mail rather than a failure (section 4.8
-item 1). They are consumed by rauthy, not by any Encore service, which is why
-they appear here rather than in `infra.config.json`.
+The dead end this rules out for the reader: choosing 465 to match rauthy's
+default TLS mode. It is the natural first guess and it cannot work on this
+network, and getting it wrong is not a lost feature but an **outage**, because
+rauthy panics on an unreachable mailer (section 4.8 item 1).
 
 `WEBAPP_BASE_URL` is **optional and deliberately left unset**. It only steers
 the post-install redirect of the GitHub App flow, and an unset value yields a
@@ -747,48 +739,55 @@ OTel traces are in the same position and are not configured here.
 ### 4.8 Upstream gaps this deploy surfaces
 
 Five items belong to the enrahitu chassis, not to this repo, and are recorded
-here because this deploy is what makes them concrete. **Items 1 and 2 were
-closed on 2026-07-20 and item 5 on 2026-07-21**, each by editing this repo's
-copy of `docker/entrypoint.sh`; items 3 and 4 stand. The three closures are one
-accumulating divergence from upstream, tracked in spec 002.
+here because this deploy is what makes them concrete. **Items 1, 2, and 5 are
+closed** (item 1 reopened 2026-07-21 and re-closed the same day); items 3 and 4
+stand. Every closure is an edit to this repo's copy of `docker/entrypoint.sh`,
+and together they are one accumulating divergence from upstream, tracked in
+spec 002 with a mirror-to-enrahitu follow-up that these keep making more urgent.
 
-1. **The embedded rauthy has no SMTP. CLOSED 2026-07-20, REOPENED 2026-07-21.**
+1. **The embedded rauthy has no SMTP. CLOSED 2026-07-20, REOPENED then
+   RE-CLOSED 2026-07-21.** The story is worth keeping whole, because each step
+   was correct on what it knew and wrong on what it did not.
 
-   **Why it reopened.** The wiring below is correct and stays; what it cannot
-   do is reach a mail server from this cluster. Hetzner blocks outbound SMTP
-   egress, verified from a pod on the live cluster rather than inferred: port
-   **465 BLOCKED, 587 OPEN, 25 BLOCKED**, with 443 open as the control. Only
-   587 is usable, and 587 needs `SMTP_STARTTLS_ONLY=true`, because rauthy
-   builds an implicit-TLS `relay()` unless `starttls_only` is set. The
-   entrypoint forwards exactly five `SMTP_*` variables into the rauthy subshell
-   and silently drops a sixth, so the one configuration that would work cannot
-   be expressed from a manifest. **Closing this properly is now a chassis
-   change**, which is what put it back on this list.
+   **Closed 2026-07-20** by forwarding five `SMTP_*` variables so rauthy had a
+   mail transport at all, replacing its `smtp_url = 'localhost'` default.
 
-   **The failure is not a lost capability, it is an outage.** rauthy's
-   `create_mailer` retries and then `panic!("SMTP connection retries
-   exceeded")` (`src/data/src/email/mailer.rs:230`, whose doc comment says so
-   outright), and the entrypoint supervises die-together, so the app dies with
-   it. An unreachable mail server therefore crash-loops the whole control
-   plane. The deploy ran healthy for roughly fifty minutes before the retry
-   budget was exhausted, which is the worst shape this can take: it passes
-   every check at rollout and fails later, so nothing ties the outage to the
-   change that caused it.
+   **Reopened 2026-07-21** when the transport turned out to be unreachable from
+   this cluster. Hetzner blocks outbound SMTP egress, verified from a pod rather
+   than inferred: **465 BLOCKED, 587 OPEN, 25 BLOCKED**, 443 open as the
+   control. The wiring pointed at 465 (implicit TLS), which is exactly the port
+   this network blocks. And an unreachable mailer is not a lost feature but an
+   **outage**: rauthy's `create_mailer` retries and then `panic!("SMTP
+   connection retries exceeded")` (`src/data/src/email/mailer.rs`, doc-commented
+   "# Panics"), which the entrypoint's die-together supervision turns into a
+   whole-container crash loop. It ran healthy for roughly fifty minutes before
+   the retry budget was exhausted, so nothing tied the outage to the change.
+   The interim fix disabled SMTP, which the entrypoint supports by gating the
+   whole group on `SMTP_URL`.
 
-   Section 4.4 recorded the opposite conclusion on 2026-07-21, that SMTP "costs
-   a redeploy, never a re-founding". The first half is now wrong: an
-   unreachable transport costs an outage. The re-founding half still holds.
+   **Re-closed 2026-07-21** by making 587 usable. rauthy builds an implicit-TLS
+   `relay()` and only speaks STARTTLS when `starttls_only` is set, so the
+   working configuration is 587 with `SMTP_STARTTLS_ONLY=true`, which the
+   entrypoint had dropped as a sixth variable. Forwarding it (the spec 002
+   fourth hunk) and re-pinning the deploy to the image that carries it restores
+   mail on the one reachable port. `SMTP_PASSWORD` is the group's only secret
+   and stays in the pod Secret; the other four values are non-secret plain env
+   (section 4.4).
 
-   **Disabling it is the supported path, not a workaround.** The entrypoint
-   gates the whole group on `SMTP_URL`, so omitting it boots cleanly with mail
-   off. The consequences are exactly those named below when this item was first
-   opened: no password reset, no email verification, no MFA recovery. That
-   directly blocks section 4.6 checkpoint 6, which calls for rotating the
-   break-glass credential to a named human account with MFA, since the
-   enrolment mail cannot be delivered. Break-glass therefore stays the
-   generated password at `/data/rauthy/admin-password` until this closes.
+   **What this unblocks, and what it does not.** With mail reachable, section
+   4.6 checkpoint 6 (rotating break-glass to a named human account with MFA) is
+   no longer blocked on delivery. It is still an operator action, so break-glass
+   stays the generated password at `/data/rauthy/admin-password` until that
+   rotation is actually done.
 
-   The original wiring, which remains in the image and is still correct:
+   **A correction this leaves standing.** Section 4.4 first claimed SMTP "costs
+   a redeploy, never a re-founding". An unreachable transport costs an outage,
+   not merely a redeploy; the re-founding half holds. The claim is kept visible
+   with its correction rather than rewritten, because the reasoning error (that
+   a per-send setting cannot take the platform down) is the thing worth not
+   repeating.
+
+   The wiring, in the image and now reachable:
 
    The entrypoint
    exported no mail configuration, so rauthy kept its `smtp_url = 'localhost'`
@@ -945,11 +944,19 @@ initialized rauthy hiqlite database all exist under `/data`.
   key crash-loops the pod is still a reasoned claim about
   `metadata.cloud: hetzner`, not an observation. It calls for verifying "once,
   deliberately, before go-live", and that deliberate test has not been run.
-- **No restore has been rehearsed.** A snapshot existing is not a restore, and
-  this spec's own section 4.3 says the rehearsal is the test of whether
-  crash-consistency suffices.
 - **`ai-pr-review.yml` does not exist**, so that line cannot be claimed.
-- **Mail is off** (section 4.8 item 1, reopened), which blocks checkpoint 6.
+
+**Closed after the initial bring-up, 2026-07-21:**
+
+- **The restore is rehearsed.** A Job restored the latest restic snapshot into
+  scratch space (never touching `/data`) and verified every piece of identity
+  material present and readable: both keypairs, the client secret, the admin
+  password, `secrets.env`, and the rauthy hiqlite database. Checkpoint 7's
+  outstanding half is closed; a snapshot is now known to be a restorable
+  identity plane, not merely a stored blob.
+- **Mail delivers.** SMTP was disabled during the SMTP-port incident and is
+  restored on 587 with STARTTLS (section 4.8 item 1). Checkpoint 6 is unblocked
+  as a result, though the rotation it calls for is still operator work.
 
 **Three defects blocked first boot, and none was caught by any gate.** Each is
 recorded where it belongs (4.8 item 5, 4.4, and 4.8 item 1) rather than
@@ -998,19 +1005,20 @@ Live bring-up is operator work, proposed here rather than performed.
    the app's user model is what proves the claim path works end to end.
 6. **Take custody of the break-glass admin credential** (section 4.6): read it
    from the volume, rotate it to a named account with MFA, and record where it
-   lives. **BLOCKED 2026-07-21** on section 4.8 item 1: with mail disabled,
-   rauthy cannot deliver the enrolment or verification messages a named MFA
-   account needs. Custody today is the generated password at
-   `/data/rauthy/admin-password`, reachable only by `kubectl exec`. This
-   checkpoint cannot close before SMTP does.
+   lives. **Unblocked 2026-07-21** now that SMTP delivers on 587 (section 4.8
+   item 1 re-closed): the enrolment and MFA-verification mail a named account
+   needs can now be sent. Still outstanding as an operator action; until it is
+   done, custody is the generated password at `/data/rauthy/admin-password`,
+   reachable only by `kubectl exec`.
 7. **Verify the volume backup and rehearse a restore** before the platform
-   holds anything real (section 4.3 rule 2). **Half done 2026-07-21.** The
-   backup is verified: snapshot `779acd3e`, 7.718 MiB across 18 files, written
-   while the app pod held the volume, which is the co-mounted case that matters
-   and the one an earlier run did not actually exercise. **The restore rehearsal
-   is still outstanding**, and it is the half that carries the meaning: a
-   snapshot proves the job runs, only a restore proves the snapshot is a
-   platform.
+   holds anything real (section 4.3 rule 2). **CLOSED 2026-07-21.** The backup
+   is verified (snapshot `779acd3e`, 7.718 MiB across 18 files, written while
+   the app pod held the volume, the co-mounted case an earlier run did not
+   exercise), and the restore is rehearsed: a Job restored the latest snapshot
+   into scratch space, never touching `/data`, and confirmed both keypairs, the
+   client secret, the admin password, `secrets.env`, and the rauthy hiqlite
+   database are present and readable. A snapshot is now known to be a restorable
+   identity plane, which is the half that carries the meaning.
 
 ## 7. Out of scope
 
