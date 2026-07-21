@@ -98,7 +98,9 @@ enrahitu 018 §4 delegated to the first stamped consumer.
    here: it now forwards the five `SMTP_*` variables into the rauthy
    subshell, gated on `SMTP_URL`, so the embedded rauthy has a mail
    transport instead of failing every send against rauthy's
-   `smtp_url = 'localhost'` default. The change landed in this repo rather
+   `smtp_url = 'localhost'` default. The same pass closed §4.8 item 2 by
+   mapping `RAUTHY_S3_*` onto rauthy's `HQL_S3_*`, which is the only
+   consistent backup of the identity database. The change landed in this repo rather
    than upstream because the published image builds from this copy and the
    deploy needed it; mirroring it into `statecrafting/enrahitu` is an open
    follow-up. Until that lands the two files differ, and **the next chassis

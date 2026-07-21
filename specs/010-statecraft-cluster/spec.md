@@ -129,14 +129,14 @@ by category:
   the files that `backend/lib/secrets.ts` falls back to. They are now
   `required = false` with that consumer restated, and the catalog states
   that injecting them is forbidden.
-- **Kept, held against a named upstream gap (2):** `RAUTHY_S3_*`. It is
-  not exported by the entrypoint, so the embedded rauthy has no backup
-  target (spec 009 section 4.8 item 2). It is kept rather than dropped
-  because the operator holds provisioned credentials, the gap has a named
-  owner in the enrahitu chassis, and its absence is a **capability loss**
-  rather than material the image supersedes. It becomes an optional
-  all-or-nothing group so the catalog stops claiming the platform
-  requires what nothing reads.
+- **Kept, and live as of 2026-07-20 (2):** `RAUTHY_S3_*`. It was held
+  against spec 009 section 4.8 item 2 (the entrypoint exported no S3
+  configuration, so the embedded rauthy had no backup target). That item
+  was closed the same day by mapping the operator-facing names onto
+  rauthy's own `HQL_S3_*`. Holding it rather than dropping it was the
+  right call: the operator had provisioned credentials, and the gap was a
+  capability loss rather than material the image supersedes. Both keys
+  are now pod Secret keys, because rauthy runs inside the container.
 - **Kept, and live as of 2026-07-20 (5):** the SMTP group. It was held on
   the same reasoning as `RAUTHY_S3_*` until spec 009 section 4.8 item 1
   was closed by wiring the entrypoint to forward all five variables into
@@ -160,12 +160,14 @@ by category:
   pair has no consumer until a second provider is converged. It is held
   on the same reasoning as the SMTP group rather than counted as live.
 
-Seven keys, and only seven, are genuinely required from a deploy and belong
+Nine keys, and only nine, are genuinely required from a deploy and belong
 on the pod Secret: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_B64`,
 `GITHUB_WEBHOOK_SECRET`, `FLEET_S3_RESTIC_PASSWORD`,
-`FLEET_S3_ACCESS_KEY_ID`, `FLEET_S3_SECRET_ACCESS_KEY` (the first of the
-restic keys was spelled `RESTIC_PASSWORD` until the 2026-07-20 credential
-split, §4). Their **delivery** still belongs to spec 009. The operator `.env` remains the origin of record for the material it
+`FLEET_S3_ACCESS_KEY_ID`, `FLEET_S3_SECRET_ACCESS_KEY`, `SMTP_PASSWORD`,
+`RAUTHY_S3_ACCESS_KEY_ID`, and `RAUTHY_S3_SECRET_ACCESS_KEY` (the first of
+the restic keys was spelled `RESTIC_PASSWORD` until the 2026-07-20
+credential split, §4; the last three joined as spec 009 §4.8 items 1 and 2
+were closed). Their **delivery** still belongs to spec 009. The operator `.env` remains the origin of record for the material it
 still names, so deleting rauthy ciphertext from this tree still loses
 nothing; there is simply far less to re-encrypt than this spec once
 assumed (section 4).
@@ -361,7 +363,7 @@ each value. **It holds no values.** From it:
 
 **The operator `.env` is the origin of record for the material the
 platform still needs from an operator**, which after §2.1 is a much
-smaller set: the cluster and provider credentials, the seven keys the pod
+smaller set: the cluster and provider credentials, the nine keys the pod
 Secret carries, and the seeder's three. That origin is what lets §2.1
 delete rauthy ciphertext from the tree without losing anything.
 
@@ -400,7 +402,7 @@ The three platform keys are catalogued but deliberately **absent from
 `infra.config.json`**: their consumer is a restic CronJob, a separate
 workload with its own Secret, so they never reach the app pod. This is
 the same containment spec 009 §4.5 applies to the seeder Job's
-credentials, and it keeps the pod Secret at seven keys. Custody of
+credentials, and it keeps the pod Secret at nine keys. Custody of
 `PLATFORM_S3_RESTIC_PASSWORD` belongs with the break-glass material
 (spec 009 §4.6), not with the fleet's: losing both it and the volume is
 unrecoverable.

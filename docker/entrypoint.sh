@@ -67,6 +67,33 @@ host="${hostport%%:*}"
   else
     echo "[entrypoint] no SMTP_URL; rauthy mail is disabled (password reset unavailable)" >&2
   fi
+  # rauthy's native hiqlite S3 backup. Unlike a file-level copy of /data, this
+  # is a real quiesced hiqlite snapshot, so it is the only consistent backup of
+  # the identity database. The operator-facing names are RAUTHY_S3_*; rauthy
+  # reads HQL_S3_*, and the translation happens here rather than by renaming
+  # what the catalog documents. Gated on RAUTHY_S3_URL, so omitting the group
+  # disables backups instead of failing the boot.
+  if [ -n "${RAUTHY_S3_URL:-}" ]; then
+    export HQL_S3_URL="$RAUTHY_S3_URL"
+    export HQL_S3_BUCKET="${RAUTHY_S3_BUCKET:-}"
+    export HQL_S3_REGION="${RAUTHY_S3_REGION:-}"
+    export HQL_S3_KEY="${RAUTHY_S3_ACCESS_KEY_ID:-}"
+    export HQL_S3_SECRET="${RAUTHY_S3_SECRET_ACCESS_KEY:-}"
+    # Hetzner Object Storage is addressed path-style (endpoint/bucket), which
+    # is also how the restic repository URL is written.
+    export HQL_S3_PATH_STYLE=true
+    # 01:30 UTC, deliberately one hour BEFORE the /data restic CronJob at
+    # 02:30. rauthy writes its consistent dump locally as well as to S3, so
+    # ordering it first means the volume backup then captures a fresh quiesced
+    # dump alongside the live (and inevitably torn) database files. The two
+    # mechanisms compose instead of overlapping. rauthy's cron is 7-field:
+    # sec min hour dom mon dow year.
+    export HQL_BACKUP_CRON="${RAUTHY_BACKUP_CRON:-0 30 1 * * * *}"
+    export HQL_BACKUP_KEEP_DAYS="${RAUTHY_BACKUP_KEEP_DAYS:-30}"
+    echo "[entrypoint] rauthy hiqlite S3 backups enabled -> $HQL_S3_URL/$HQL_S3_BUCKET"
+  else
+    echo "[entrypoint] no RAUTHY_S3_URL; rauthy hiqlite S3 backups are disabled" >&2
+  fi
   cd /rauthy
   exec ./rauthy serve
 ) &
