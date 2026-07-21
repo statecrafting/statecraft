@@ -334,6 +334,16 @@ successor task. Platform observability is the in-substrate flag-gated
   authoring decisions are worth stating here because a reader would otherwise
   read their absence as an oversight.
 
+  **The pinned digest tracks the chassis fixes the live bring-up forced**, and
+  each re-pin is recorded because the digest is the deployed truth. After the
+  backup-wiring image it advanced twice on 2026-07-21: first to the image that
+  forwards `SMTP_STARTTLS_ONLY` (section 4.8 item 1, the only reachable mail
+  configuration on this network), then to the image whose rauthy proxy strips
+  `Sec-Fetch-*` (spec 002, so the GitHub upstream login callback is not blocked
+  as a forged `cors` request). Each re-pin is a mechanical bump of the digest
+  comment and value; the reasoning lives in the owning sections rather than in
+  the manifest.
+
   **The tier sets `wait: false`, unlike every other tier in the tree.** First
   boot generates two RS256 keypairs and rauthy's whole database before the app
   answers, and the Deployment cannot become Ready until an operator has

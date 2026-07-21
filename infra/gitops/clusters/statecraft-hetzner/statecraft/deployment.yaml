@@ -43,12 +43,13 @@ spec:
         - name: statecraft
           # Pinned by digest, never `:latest`. The tag is recorded alongside
           # for human legibility only; the digest is what is deployed.
-          # tag: 2e3c9d7 (009-smtp-starttls, 2026-07-21) - forwards
-          # SMTP_STARTTLS_ONLY so port 587 is usable, which the SMTP env below
-          # depends on. The prior digest (e9c146dc, built from a998732) booted
-          # but could only reach an implicit-TLS mail port (465), which Hetzner
-          # blocks; see spec 009 section 4.8 item 1.
-          image: ghcr.io/statecrafting/statecraft@sha256:baf417288582e1735218799879241383c6fe476f65f305f9483fe390ee66d820
+          # tag: 4d0a392 (009-proxy-secfetch, 2026-07-21) - the rauthy proxy
+          # strips Sec-Fetch-* so the GitHub upstream login callback is not
+          # blocked as a forged cors request (spec 002, fifth chassis hunk). The
+          # prior digest (baf41728, built from 2e3c9d7) added SMTP 587/STARTTLS
+          # but still corrupted Sec-Fetch-Mode in the proxy, so upstream login's
+          # return leg 400'd.
+          image: ghcr.io/statecrafting/statecraft@sha256:e4cc8b90f07b6d0ccd7074b1eecef94f1d262250aad240f0cec094b07dd90d9d
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
