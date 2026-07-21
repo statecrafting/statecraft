@@ -571,8 +571,30 @@ URL to select the Postgres driver. `ENRAHITU_LEDGER_POOL_SIZE` is optional.
 **Read by services, set by the deploy:** `FLEET_BASE_DOMAIN`,
 `FLEET_IMAGE_PULL_SECRET`, `FLEET_BACKUP_BUCKET`, `FLEET_BACKUP_S3_ENDPOINT`,
 `FLEET_RESTIC_IMAGE`, `FACTORY_TEMPLATE_REPO`, `FACTORY_TEMPLATE_REF`,
-`FACTORY_DATA_DIR`, `STATECRAFT_GOVERNANCE_CONFIG_DIR`,
-`STATECRAFT_GOVERNANCE_STATE_DIR`. **Correction:** the previous version wrote
+`FACTORY_DATA_DIR`, and `STATECRAFT_GOVERNANCE_STATE_DIR`.
+
+**`STATECRAFT_GOVERNANCE_CONFIG_DIR` was on that list and must not be, found
+live 2026-07-21.** Listing it beside `STATECRAFT_GOVERNANCE_STATE_DIR` treated
+two variables as a pair when they are opposites, and the Deployment followed
+the spec and pointed both at `/data`. The state dir is mutable chain state and
+belongs on the volume. The gate config is a **committed artifact** that ships
+inside the image at `/workspace/backend/governance/config/gate.v1.json`, and
+`backend/governance/config.ts` already defaults to it correctly by resolving
+from `process.cwd()`, which the image sets to `/workspace`. Overriding it aimed
+the read at a directory nothing in this system ever creates.
+
+The failure was total rather than degraded: that file is read with
+`readFileSync` at **module load**, so the miss is a synchronous `ENOENT` thrown
+during ES module evaluation, before any Encore service initializes and with no
+route serving. The correct deploy action is to set nothing and let the default
+resolve, which is why the variable now appears in this spec only as a
+prohibition.
+
+The general rule this deploy keeps rediscovering: `/data` is for what the
+container writes, never for what it ships with. The same reasoning already
+governs section 4.3's treatment of the volume as the identity anchor.
+
+**Correction:** the previous version wrote
 the last two with a lowercase `statecraft_` prefix; the code reads them
 uppercase. Environment variable names are case-sensitive, so an operator
 following the old spelling would have set variables nothing reads. The same
@@ -583,7 +605,25 @@ that file is next touched.
 **Read by the embedded rauthy, set by the deploy (added 2026-07-20):**
 `SMTP_URL`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_FROM`. These four are
 non-secret and travel as plain env; the fifth, `SMTP_PASSWORD`, is a key of
-the pod Secret (section 2.2). The entrypoint forwards all five into the
+the pod Secret (section 2.2).
+
+**`SMTP_PORT` must be 465, not 587, corrected live 2026-07-21.** rauthy builds
+its transport with lettre's `relay()`, which opens TLS immediately, and only
+uses `starttls_relay()` when `starttls_only` is set. Against gmail's STARTTLS
+port 587 it therefore wrapped TLS around a listener that answers in plaintext
+and failed the handshake with `InvalidMessage(InvalidContentType)`, logged at
+boot as "Could not connect to smtp.gmail.com via TLS. Check credentials". The
+credentials were fine; the message misattributes a transport mismatch.
+
+`SMTP_STARTTLS_ONLY=true` on port 587 is the equally valid configuration, and
+it was not chosen for a mechanical reason worth recording: the entrypoint
+forwards exactly five `SMTP_*` variables into the rauthy subshell, so a sixth
+would be ignored until a chassis change and a rebuilt image landed. The port is
+a manifest edit that needs neither.
+
+This is the failure mode section 4.8 item 1 predicted when it noted SMTP is
+read per send rather than at bootstrap: it cost a redeploy, never a
+re-founding. The entrypoint forwards all five into the
 rauthy subshell only when `SMTP_URL` is set, so omitting the group is a
 supported configuration that disables mail rather than a failure (section 4.8
 item 1). They are consumed by rauthy, not by any Encore service, which is why

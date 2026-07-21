@@ -86,8 +86,16 @@ spec:
             # ---------------------------------------------------------------
             - name: SMTP_URL
               value: "smtp.gmail.com"
+            # 465 (implicit TLS), not 587 (STARTTLS). rauthy builds its
+            # transport with lettre's `relay()` unless `starttls_only` is set,
+            # so it opens TLS immediately; against 587 gmail answers with a
+            # plaintext greeting and the handshake fails with
+            # InvalidMessage(InvalidContentType). SMTP_STARTTLS_ONLY would be
+            # the alternative, but the entrypoint forwards only the five SMTP_*
+            # variables into the rauthy subshell, so honoring it would need a
+            # chassis change and a rebuilt image; the port is a manifest edit.
             - name: SMTP_PORT
-              value: "587"
+              value: "465"
             - name: SMTP_USERNAME
               value: "bartekus@gmail.com"
             - name: SMTP_FROM
@@ -133,8 +141,15 @@ spec:
               value: "main"
             - name: FACTORY_DATA_DIR
               value: "/data/factory"
-            - name: STATECRAFT_GOVERNANCE_CONFIG_DIR
-              value: "/data/governance/config"
+            # STATECRAFT_GOVERNANCE_CONFIG_DIR is deliberately NOT set. The gate
+            # config is a committed artifact that ships in the image at
+            # /workspace/backend/governance/config/gate.v1.json, and the app's
+            # default resolves it from process.cwd() (= /workspace), which is
+            # correct here. Pointing it at the volume aims it at a directory
+            # nothing ever writes: backend/governance/config.ts reads the file
+            # at module load, so the miss is a synchronous ENOENT that kills the
+            # process before any service starts. Only mutable state belongs on
+            # /data, which is what STATE_DIR below is.
             - name: STATECRAFT_GOVERNANCE_STATE_DIR
               value: "/data/governance/state"
           # The seven keys of spec 009 section 2.2, and no others. Notably
