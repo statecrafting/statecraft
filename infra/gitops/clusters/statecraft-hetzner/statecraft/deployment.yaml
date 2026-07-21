@@ -43,8 +43,9 @@ spec:
         - name: statecraft
           # Pinned by digest, never `:latest`. The tag is recorded alongside
           # for human legibility only; the digest is what is deployed.
-          # tag: 85553d38216c9c5fdf5fefdab7587936ac6c52a6 (main, 2026-07-20)
-          image: ghcr.io/statecrafting/statecraft@sha256:5e7267f5a1be503c685689e948d8d7bb320e80d403db121e48c6099c78d7f6c7
+          # tag: c475934 (main, 2026-07-21) - adds rauthy's native hiqlite S3
+          # backup on top of the SMTP wiring and the production infra config.
+          image: ghcr.io/statecrafting/statecraft@sha256:740c7847686f6405fc536c9025ab0a4d8453073fb9df371bfd0a43021fe1855a
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -88,6 +89,26 @@ spec:
               value: "bartekus@gmail.com"
             - name: SMTP_FROM
               value: "Admin <admin@statecraft.ing>"
+            # ---------------------------------------------------------------
+            # rauthy's native hiqlite S3 backup (spec 009 section 4.8 item 2,
+            # closed 2026-07-20). This is the only QUIESCED backup of the
+            # identity database; the /data restic CronJob copies files while
+            # hiqlite is live and is therefore crash-consistent only.
+            #
+            # Three non-secret values here; the credentials
+            # (RAUTHY_S3_ACCESS_KEY_ID / RAUTHY_S3_SECRET_ACCESS_KEY) arrive
+            # via envFrom below, because rauthy runs inside this pod. Contrast
+            # PLATFORM_S3_*, which stays off the pod entirely: the restic
+            # CronJob is its own workload. The entrypoint maps these onto
+            # rauthy's HQL_S3_* and schedules at 01:30 UTC, an hour before the
+            # CronJob, so the volume backup captures a fresh quiesced dump.
+            # ---------------------------------------------------------------
+            - name: RAUTHY_S3_URL
+              value: "https://nbg1.your-objectstorage.com"
+            - name: RAUTHY_S3_BUCKET
+              value: "statecraft-platform-backup"
+            - name: RAUTHY_S3_REGION
+              value: "nbg1"
             # ---------------------------------------------------------------
             # Read by services, set by the deploy (spec 009 section 4.4).
             # WEBAPP_BASE_URL is deliberately unset: an unset value yields a
