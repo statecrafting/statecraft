@@ -32,7 +32,7 @@ ADDON_NODE="addon/hiqlite-native.${NAPI_TRIPLE}.node"
 for required in "$ADDON_NODE" addon/index.js addon/index.d.ts; do
   if [ ! -f "$required" ]; then
     echo "missing $required" >&2
-    echo "build the addon first: npm run build:addon (host) + the linux cross-build" >&2
+    echo "install deps first: npm ci (the addons are prebuilt @statecrafting packages)" >&2
     exit 1
   fi
 done

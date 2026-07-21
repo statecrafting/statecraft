@@ -4,8 +4,10 @@ Operates stamped EnRaHiTu apps on the hetzner-k3s cluster. The unit of
 placement is "one EnRaHiTu container + one volume + one ingress" in a
 per-tenant namespace (`t-<tenantId>`).
 
-The Kubernetes work is done by the **`fleet-native`** napi addon
-(`addon/fleet-native`), which builds the placement shape natively with
+The Kubernetes work is done by the **`fleet-native`** napi addon, consumed as
+the published `@statecrafting/fleet-native` (statecrafting spec 006; it lived
+here under `addon/fleet-native/` until that transfer). It builds the placement
+shape natively with
 `kube-rs` (Deployment single-replica Recreate, PVC, ClusterIP Service, nginx
 Ingress with a cert-manager DNS-01 TLS annotation, Namespace, baseline
 NetworkPolicies) and exposes `placeApp` / `appStatus` / `updateApp` /

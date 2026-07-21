@@ -1,15 +1,15 @@
 # Build + publish the statecraft control-plane single-container image
 # (spec 009). Unlike the enrahitu template, the toolchain is consumed as npm
-# packages (@enrahitu/toolchain, @enrahitu/hiqlite-native): `npm ci` on a linux
-# runner pulls the prebuilt linux Encore runtime / tsparser / hiqlite from the
-# @enrahitu/*-linux-x64 optional-dependency packages, so there is no vendored
-# Rust cross-build. Only statecraft's OWN two addons (governance-native,
-# fleet-native) build here, natively.
+# packages (@enrahitu/toolchain, @enrahitu/hiqlite-native, and since
+# statecrafting specs 005/006 the two control-plane addons as
+# @statecrafting/{governance,fleet}-native): `npm ci` on a linux runner pulls
+# every prebuilt linux binary from the corresponding *-linux-x64 / *-linux-x64-gnu
+# optional-dependency packages. Nothing Rust builds here at all.
 #
 # amd64 only: the fleet cluster is x86-64. The prebuilt @enrahitu/toolchain-linux-x64
 # binaries (tsparser + runtime) require GLIBC_2.39, so the build runs on
 # ubuntu-24.04 (glibc 2.39) and the image base is node:24-trixie-slim (glibc
-# 2.41 >= 2.39) so the runtime + the natively-built addons all load.
+# 2.41 >= 2.39) so the runtime + the prebuilt addons all load.
 #
 # NOTE: no /health smoke here. The control plane runs the Postgres driver
 # (spec 003), so it cannot become healthy without a database; runtime
@@ -40,14 +40,13 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - name: Install protoc + cmake (native addon builds)
-        run: sudo apt-get update -q && sudo apt-get install -y -q protobuf-compiler cmake
       # npm ci installs the linux platform packages
       # (@enrahitu/toolchain-linux-x64 -> encore-runtime.node + tsparser-encore,
-      # @enrahitu/hiqlite-native-linux-x64-gnu -> the hiqlite .node).
+      # @enrahitu/hiqlite-native-linux-x64-gnu -> the hiqlite .node, and
+      # @statecrafting/{governance,fleet}-native-linux-x64-gnu -> the two
+      # control-plane addons, published rather than built here since
+      # statecrafting specs 005/006).
       - run: npm ci
-      - name: Build statecraft's own addons (governance + fleet, native linux)
-        run: npm run build:addon
       # frontend is not a root workspace and has its own lockfile; build:web only
       # runs `vite build`, it does not install. Install its deps first.
       - name: Install the frontend (SPA) deps

@@ -24,7 +24,7 @@ export function governanceStateDir(): string {
 
 /**
  * The committed gate config v1, read once at module load. Its stable hash is
- * pinned by an addon test (addon/governance-native/src/gate.rs), so any change
+ * pinned by a test in the addon package (statecrafting spec 005), so any change
  * to this file is visible in review.
  *
  * Resolved from the app root (process.cwd()), NOT import.meta.url: enrahitu-build

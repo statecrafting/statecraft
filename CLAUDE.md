@@ -28,7 +28,8 @@ standards/   spec-spine constitution, contract, templates
 
 Service layout (spec 001 §3): `backend/` (the Encore.ts app: `auth/`,
 `idp/`, `core/`, `tenants/`, `factory/`, `fleet/`, `governance/`, plus
-chassis plumbing), `addon/` (fleet-native + governance-native, napi-rs),
+chassis plumbing; the fleet-native and governance-native napi addons are
+pinned @statecrafting/* dependencies, no longer in-tree),
 `frontend/` (governance UI); `frontend-admin/` (flag-gated operator
 dashboard) arrives with the substrate rewrite.
 

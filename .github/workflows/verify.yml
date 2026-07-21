@@ -1,8 +1,10 @@
 # Verify (statecraft spec 002): build the app shell and run its test gauntlet
-# in CI, the same builds a stamped app's toolchain performs. The
-# governance-native addon (spec 008) is built from source (napi/cargo); the
-# Encore toolchain and the hiqlite addon resolve as prebuilt binaries from the
-# pinned @enrahitu/* packages (no vendored runtime build, no protoc). A
+# in CI, the same builds a stamped app's toolchain performs. Nothing is built
+# from source here: the Encore toolchain and the hiqlite addon resolve as
+# prebuilt binaries from the pinned @enrahitu/* packages, and the governance
+# and fleet addons likewise from the pinned @statecrafting/* packages
+# (statecrafting specs 005/006). No vendored runtime build, no cargo, no
+# protoc. A
 # Postgres service backs the CoreLedger Postgres-driver arm (spec 003): the
 # parameterized ledger suite runs on both drivers every CI run via
 # TEST_POSTGRES_URL, so "scaling is a driver swap" stays continuously proven.
@@ -42,22 +44,12 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            addon/governance-native/package-lock.json
             frontend/package-lock.json
-      - name: Cache cargo (governance-native addon)
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            addon/governance-native/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('addon/governance-native/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-
+      # No cargo cache and no addon build: governance-native and fleet-native
+      # are published @statecrafting packages now (statecrafting specs 005/006),
+      # so npm ci installs their prebuilt per-platform binaries.
       - run: npm ci
       - run: npm --prefix frontend ci
-      - name: Build governance-native addon
-        run: npm run build:addon
       - name: Build web (SPA into backend/web/dist)
         run: npm run build:web
       - name: Build app (generates encore.gen)

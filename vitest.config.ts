@@ -67,7 +67,7 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.ts"],
-    exclude: ["node_modules/**", "addon/**", "frontend/**", "encore.gen/**"],
+    exclude: ["node_modules/**", "frontend/**", "encore.gen/**"],
     env: {
       ...(runtimeLib ? { ENCORE_RUNTIME_LIB: runtimeLib } : {}),
       ...encoreTestEnv(),

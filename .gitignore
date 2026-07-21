@@ -62,9 +62,3 @@ encore.gen.cue
 backend/web/dist/*
 !backend/web/dist/index.html
 
-# governance-native napi addon (spec 008): built payloads never enter git.
-# (The addon also carries its own .gitignore; these mirror it at the root.)
-addon/governance-native/target/
-addon/governance-native/*.node
-addon/governance-native/index.js
-addon/governance-native/index.d.ts

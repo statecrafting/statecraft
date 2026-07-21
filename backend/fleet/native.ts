@@ -1,5 +1,6 @@
 /**
- * Typed facade over the fleet-native napi addon (spec 006 §1/§2).
+ * Typed facade over the fleet-native napi addon (spec 006 §1/§2; the addon
+ * itself is statecrafting spec 006).
  *
  * The addon's surface is plain-JSON-in / plain-JSON-out (`Promise<string>`); this
  * module owns the TypeScript types and the JSON boundary so the rest of the
@@ -7,7 +8,7 @@
  * (`FLEET_KUBECONFIG_PATH`, else in-cluster / `~/.kube/config`); this layer never
  * opens the kubeconfig file.
  */
-import fleetNative from "@statecraft/fleet-native";
+import fleetNative from "@statecrafting/fleet-native";
 
 /** The desired placement for one app. `namespace` is `t-<tenantId>`. */
 export interface DeploySpec {

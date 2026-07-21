@@ -1,12 +1,12 @@
 /**
- * Typed facade over the `@statecraft/governance-native` napi-rs addon (spec 008).
+ * Typed facade over the `@statecrafting/governance-native` napi-rs addon
+ * (spec 008; the addon itself is statecrafting spec 005).
  *
  * The addon is a CJS napi module; default-import then treat it as the typed
  * surface below. These interfaces mirror the `#[napi(object)]` structs the
- * addon exports (see addon/governance-native/src/napi_api.rs); the generated
- * `index.d.ts` supersedes them once the addon is built under the shell.
+ * addon exports; the published package's own `index.d.ts` supersedes them.
  */
-import governanceNative from "@statecraft/governance-native";
+import governanceNative from "@statecrafting/governance-native";
 
 /** `{ canonical, sha256 }` for a JSON document (sha256 is bare lowercase hex). */
 export interface CanonicalResult {

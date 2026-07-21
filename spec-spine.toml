@@ -14,15 +14,19 @@ allowed = []   # empty: the `kind` field is free-text / disabled
 specs_dir     = "specs"
 derived_dir   = ".derived"
 standards_dir = "standards/spec"
-# The governance (spec 008) and fleet (spec 006) napi addons are standalone
-# Rust crates and npm packages. The app shell (spec 002) brings the root
-# package.json (an Encore app, spec-spine key -> 002); the SPA is the frontend/
-# package (spec 007, spec-spine key -> 007), matching the enrahitu chassis
-# backend/ + frontend/ convention. The Encore toolchain and hiqlite addon are
-# pinned @enrahitu/* dependencies, not in-tree packages, so they are not listed
+# No in-tree Rust crates remain. The governance (spec 008) and fleet (spec 006)
+# napi addons moved to the statecrafting repo (its specs 005 and 006) and are
+# consumed here as pinned @statecrafting/* dependencies, exactly as the Encore
+# toolchain and the hiqlite addon already were. Both specs keep their backend/
+# service directories; only the addon path transferred.
+#
+# The app shell (spec 002) brings the root package.json (an Encore app,
+# spec-spine key -> 002); the SPA is the frontend/ package (spec 007,
+# spec-spine key -> 007), matching the enrahitu chassis backend/ + frontend/
+# convention. Pinned dependencies are not in-tree packages, so none are listed
 # here.
-standalone_rust_workspaces = ["addon/governance-native", "addon/fleet-native"]
-standalone_npm_packages    = ["addon/governance-native", "addon/fleet-native", "frontend"]
+standalone_rust_workspaces = []
+standalone_npm_packages    = ["frontend"]
 
 [index]
 # Governance surfaces beyond the always-hashed core. Service manifests are

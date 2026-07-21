@@ -8,7 +8,6 @@ depends_on:
   - "005-factory-service"
 establishes:
   - { kind: directory, path: "backend/fleet/" }
-  - { kind: directory, path: "addon/fleet-native/" }
 summary: >
   Milestone M3: operate stamped apps. The unit of placement is "one
   EnRaHiTu container + one volume + one ingress" on the existing
@@ -56,9 +55,12 @@ lifted.
 
 ## 2. Territory
 
-- `addon/fleet-native/`: napi-rs cdylib crate `fleet-native` (own
-  Cargo.toml with the spec-spine manifest key pointing here; add to
-  `spec-spine.toml` standalone lists). Exposes async fns:
+- `@statecrafting/fleet-native`: napi-rs cdylib crate `fleet-native`.
+  **Transferred 2026-07-20** to the statecrafting repo as its spec 006 and
+  consumed here as a pinned published dependency; it lived at
+  `addon/fleet-native/` until then. The surface below is unchanged by that
+  move and remains this spec's integration contract, but the addon's
+  implementation, tests, and license are governed there. Exposes async fns:
   `placeApp(spec)`, `appStatus(name, ns)`, `updateApp(spec)`,
   `backupApp(name, ns, target)`, `removeApp(name, ns)`; all take/return
   JSON-serializable plain objects; kubeconfig path or in-cluster config
@@ -324,3 +326,33 @@ but full auth flows need the public URL). With the single-app E2E holding, 006 i
 - Image building/publishing pipeline (later spec).
 - Turso credential provisioning for tenant apps (later spec, pairs
   with the paid durability tier).
+
+### 2026-07-20: the addon transferred out; this spec narrowed, not retired
+
+`addon/fleet-native/` left for the statecrafting repo, where it is that repo's
+spec 006 and publishes as `@statecrafting/fleet-native` 0.1.0 (AGPL-3.0,
+unchanged: it is the fleet engine, and statecrafting spec 001 section 3 keeps
+the SaaS shield exactly where it was).
+
+This spec dropped that one `establishes` edge and keeps `backend/fleet/`, along
+with everything that is not addon territory: the FleetApp / FleetOp entities
+and the intent journal, the five verbs, the governance gate hook, the section 3
+placement and backup decisions, the operator prerequisites, the four findings
+from the 2026-07-15 live E2E and their fixes, the 2026-07-16 E2E that passed on
+deployd.xyz, and the deferred M3 ten-app scale check with its residuals. Per
+statecrafting spec 001 section 4 no exporting spec retires; this one is also
+the only written account of why the production cluster is configured as it is.
+
+What changed here: the root manifest depends on `@statecrafting/fleet-native`
+at `0.1.0` instead of `file:./addon/fleet-native`,
+`backend/fleet/native.ts` imports the published package, the `build:addon`
+script and its CI steps are gone (`npm ci` installs a prebuilt per-platform
+binary), and the two `spec-spine.toml` standalone entries are removed.
+
+No resource shape, wire constant, or behavior changed, so the live E2E was not
+re-run: the golden shape tests that guard those shapes moved with the crate and
+are green there (12). The `fleet.statecraft.ing/app` label and the
+`statecraft-system` reserved-namespace entry are wire constants and were
+deliberately left alone. The section 3 note about `FLEET_S3_RESTIC_PASSWORD`
+being passed into the backup Job as restic's own `RESTIC_PASSWORD` still holds
+and is untouched.

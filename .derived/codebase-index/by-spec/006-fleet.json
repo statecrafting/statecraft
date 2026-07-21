@@ -5,32 +5,11 @@
     ],
     "implementingPaths": [
       {
-        "path": "addon/fleet-native",
-        "source": "manifest-metadata"
-      },
-      {
-        "path": "addon/fleet-native/",
-        "source": "spec-edge"
-      },
-      {
         "path": "backend/fleet/",
         "source": "spec-edge"
       }
     ],
     "resolvedUnits": [
-      {
-        "locations": [
-          {
-            "file": "addon/fleet-native/"
-          }
-        ],
-        "ownership": true,
-        "sourceField": "establishes",
-        "unit": {
-          "kind": "directory",
-          "path": "addon/fleet-native/"
-        }
-      },
       {
         "locations": [
           {
@@ -49,5 +28,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "19bb846ad047593458ff99b921e2897b4a977c2dc75b303b832ea0ddbd3fdf46"
+  "shardHash": "1c3a1dc7ae230b06f911562403988bba2861520cef56b955ba79479636ac9fe2"
 }

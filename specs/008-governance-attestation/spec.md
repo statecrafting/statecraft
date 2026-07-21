@@ -8,7 +8,6 @@ depends_on:
   - "001-statecraft-thesis"
 establishes:
   - { kind: directory, path: "backend/governance/" }
-  - { kind: directory, path: "addon/governance-native/" }
 summary: >
   The platform's tamper-evident memory and its decision spine, built on
   the four crates extracted from OAP's policy-kernel: attest-ledger
@@ -55,9 +54,13 @@ session has access.
 
 ## 2. Territory
 
-- `addon/governance-native/`: napi-rs cdylib `governance-native`
-  (spec-spine manifest key -> this spec; add to spec-spine.toml
-  standalone lists). Exposed surface (plain JSON in/out):
+- `@statecrafting/governance-native`: napi-rs cdylib `governance-native`.
+  **Transferred 2026-07-20** to the statecrafting repo as its spec 005 and
+  consumed here as a pinned published dependency; it lived at
+  `addon/governance-native/` until then. The surface below is unchanged by
+  that move and remains this spec's integration contract, but the addon's
+  implementation, tests, and license are governed there. Exposed surface
+  (plain JSON in/out):
   - `canonicalize(json) -> {canonical, sha256}`
   - `ledgerAppend(stateDir, record) -> {seq, recordHash, chainHash}`
     and `ledgerVerify(stateDir) -> {ok, seq, error?}` over an
@@ -204,3 +207,33 @@ serves `/governance/verify` (ok), `/governance/records`, and
 `/governance/trust/:actor`. Deferred by design: the born-with certHash
 cross-check (§3) lands with the factory (spec 005); trust-level
 enforcement stays advisory (§5).
+
+### 2026-07-20: the addon transferred out; this spec narrowed, not retired
+
+`addon/governance-native/` left for the statecrafting repo, where it is that
+repo's spec 005 and publishes as `@statecrafting/governance-native` 0.1.0
+(AGPL-3.0, unchanged). This spec dropped that one `establishes` edge and keeps
+`backend/governance/`: the service, its endpoints, the CoreLedger index and
+trust store, the deployed gate config, and the section 3 integration contract
+that specs 005 and 006 call at their privileged moments. Per statecrafting spec
+001 section 4 an edge is transferred, never duplicated, and no exporting spec
+retires: this one owns code that is still running.
+
+What changed here: the root manifest depends on
+`@statecrafting/governance-native` at `0.1.0` instead of
+`file:./addon/governance-native`, `backend/governance/native.ts` imports the
+published package, the `build:addon` script and its CI steps are gone (`npm ci`
+installs a prebuilt per-platform binary), and the two `spec-spine.toml`
+standalone entries are removed.
+
+`backend/governance/config/gate.v1.json` stays here and is still read at
+runtime from the app root. The addon vendored its own copy of the same roster
+so its crate is self-contained (statecrafting spec 005 section 2.1); both are
+pinned to the identical config hash
+(`sha256:a0356df3a1d2ca95a030e1d9329a7ceb20a54fc1ed1834dd0b158047c306f107`,
+byte-unchanged by the move), so drift in either copy fails a test in its own
+repository. That is the same "config drift is visible in review" property
+section 2 asked for, now holding across two repositories.
+
+Nothing in the addon's behavior or surface changed. Acceptance is unaffected:
+the service tests still pass against the published package.

@@ -64,8 +64,8 @@ setup additionally needs Node and the chassis install/build steps from that
 spec's Acceptance section:
 
 ```bash
-npm --prefix addon ci && npm ci && npm --prefix frontend ci
-npm run build:addon && npm run build:runtime && npm run build:app
+npm ci && npm --prefix frontend ci
+npm run build:runtime && npm run build:app
 npm run typecheck && npm test    # the chassis gates
 ```
 

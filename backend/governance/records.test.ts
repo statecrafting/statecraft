@@ -4,7 +4,7 @@
  * These run under the chassis vitest once the app shell (spec 002) lands and
  * the governance-native addon is built; they are inert until then (there is no
  * vitest in this repo pre-002). The addon's own logic is proven now by
- * `cargo test --no-default-features` in addon/governance-native/.
+ * `cargo test --no-default-features` in the statecrafting repo (spec 005).
  */
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
