@@ -325,7 +325,10 @@ successor task. Platform observability is the in-substrate flag-gated
   waiver.
 
   **Landed 2026-07-20:** the tier file plus `pvc.yaml`, `deployment.yaml`,
-  `service.yaml`, `ingress.yaml`, and `backup-cronjob.yaml`. All five validate
+  `service.yaml`, `ingress.yaml`, and `backup-cronjob.yaml`. The Deployment
+  was re-pinned on 2026-07-21 to the image carrying the section 4.8 item 2
+  backup wiring, and given the three non-secret `RAUTHY_S3_*` values that
+  wiring reads. All five validate
   against the live API server by `kubectl apply --dry-run=server`, which is
   admission validation rather than schema parsing and is non-mutating. Three
   authoring decisions are worth stating here because a reader would otherwise
