@@ -79,27 +79,26 @@ spec:
             - name: ENRAHITU_LEDGER_URL
               value: "postgres://statecraft:$(POSTGRES_PASSWORD)@postgresql.statecraft-system:5432/statecraft"
             # ---------------------------------------------------------------
-            # SMTP for the embedded rauthy (spec 009 section 4.8 item 1,
-            # closed 2026-07-20). Four non-secret values here; SMTP_PASSWORD
-            # arrives via envFrom below. The entrypoint forwards all five into
-            # the rauthy subshell only when SMTP_URL is set.
+            # SMTP is DISABLED, and this is load-bearing rather than a
+            # simplification. rauthy's create_mailer panics with "SMTP
+            # connection retries exceeded" when the transport is unreachable
+            # (src/data/src/email/mailer.rs:230), and the entrypoint supervises
+            # die-together, so an unreachable mail server is a whole-platform
+            # crash loop rather than a lost capability.
+            #
+            # The reachable configuration needs a chassis change this repo
+            # cannot make from a manifest. Hetzner blocks outbound 465 and 25
+            # from the cluster (verified from a pod: 465 BLOCKED, 587 OPEN, 25
+            # BLOCKED, 443 OPEN), so only 587 is usable, and 587 requires
+            # SMTP_STARTTLS_ONLY because rauthy otherwise builds an implicit-TLS
+            # `relay()`. The entrypoint forwards exactly five SMTP_* variables
+            # and drops a sixth, so honoring it needs a rebuilt image.
+            #
+            # Omitting SMTP_URL is the entrypoint's supported mail-disabled
+            # path, so this boots cleanly. Section 4.8 item 1 is REOPENED.
+            # SMTP_PASSWORD stays in the Secret: it is not entrypoint-discarded,
+            # it is unread until the group returns.
             # ---------------------------------------------------------------
-            - name: SMTP_URL
-              value: "smtp.gmail.com"
-            # 465 (implicit TLS), not 587 (STARTTLS). rauthy builds its
-            # transport with lettre's `relay()` unless `starttls_only` is set,
-            # so it opens TLS immediately; against 587 gmail answers with a
-            # plaintext greeting and the handshake fails with
-            # InvalidMessage(InvalidContentType). SMTP_STARTTLS_ONLY would be
-            # the alternative, but the entrypoint forwards only the five SMTP_*
-            # variables into the rauthy subshell, so honoring it would need a
-            # chassis change and a rebuilt image; the port is a manifest edit.
-            - name: SMTP_PORT
-              value: "465"
-            - name: SMTP_USERNAME
-              value: "bartekus@gmail.com"
-            - name: SMTP_FROM
-              value: "Admin <admin@statecraft.ing>"
             # ---------------------------------------------------------------
             # rauthy's native hiqlite S3 backup (spec 009 section 4.8 item 2,
             # closed 2026-07-20). This is the only QUIESCED backup of the

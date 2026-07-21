@@ -621,9 +621,18 @@ forwards exactly five `SMTP_*` variables into the rauthy subshell, so a sixth
 would be ignored until a chassis change and a rebuilt image landed. The port is
 a manifest edit that needs neither.
 
-This is the failure mode section 4.8 item 1 predicted when it noted SMTP is
-read per send rather than at bootstrap: it cost a redeploy, never a
-re-founding. The entrypoint forwards all five into the
+**Superseded within a day, 2026-07-21: the group is now unset entirely.** Port
+465 is correct for rauthy's TLS mode and unreachable from this cluster, because
+Hetzner blocks outbound 465 and 25 while leaving 587 open. The reachable
+configuration is 587 with `SMTP_STARTTLS_ONLY`, which the entrypoint cannot
+forward, so SMTP is disabled until that chassis change lands. Section 4.8 item
+1 carries the evidence and is reopened.
+
+The claim this paragraph originally made, that a wrong SMTP setting "costs a
+redeploy, never a re-founding", was half wrong and worth keeping visible: an
+unreachable transport makes rauthy panic after its retry budget, so it costs an
+**outage**, roughly fifty minutes after a rollout that looked healthy. Only the
+re-founding half survives. The entrypoint forwards all five into the
 rauthy subshell only when `SMTP_URL` is set, so omitting the group is a
 supported configuration that disables mail rather than a failure (section 4.8
 item 1). They are consumed by rauthy, not by any Encore service, which is why
@@ -743,7 +752,45 @@ closed on 2026-07-20 and item 5 on 2026-07-21**, each by editing this repo's
 copy of `docker/entrypoint.sh`; items 3 and 4 stand. The three closures are one
 accumulating divergence from upstream, tracked in spec 002.
 
-1. **The embedded rauthy has no SMTP. CLOSED 2026-07-20.** The entrypoint
+1. **The embedded rauthy has no SMTP. CLOSED 2026-07-20, REOPENED 2026-07-21.**
+
+   **Why it reopened.** The wiring below is correct and stays; what it cannot
+   do is reach a mail server from this cluster. Hetzner blocks outbound SMTP
+   egress, verified from a pod on the live cluster rather than inferred: port
+   **465 BLOCKED, 587 OPEN, 25 BLOCKED**, with 443 open as the control. Only
+   587 is usable, and 587 needs `SMTP_STARTTLS_ONLY=true`, because rauthy
+   builds an implicit-TLS `relay()` unless `starttls_only` is set. The
+   entrypoint forwards exactly five `SMTP_*` variables into the rauthy subshell
+   and silently drops a sixth, so the one configuration that would work cannot
+   be expressed from a manifest. **Closing this properly is now a chassis
+   change**, which is what put it back on this list.
+
+   **The failure is not a lost capability, it is an outage.** rauthy's
+   `create_mailer` retries and then `panic!("SMTP connection retries
+   exceeded")` (`src/data/src/email/mailer.rs:230`, whose doc comment says so
+   outright), and the entrypoint supervises die-together, so the app dies with
+   it. An unreachable mail server therefore crash-loops the whole control
+   plane. The deploy ran healthy for roughly fifty minutes before the retry
+   budget was exhausted, which is the worst shape this can take: it passes
+   every check at rollout and fails later, so nothing ties the outage to the
+   change that caused it.
+
+   Section 4.4 recorded the opposite conclusion on 2026-07-21, that SMTP "costs
+   a redeploy, never a re-founding". The first half is now wrong: an
+   unreachable transport costs an outage. The re-founding half still holds.
+
+   **Disabling it is the supported path, not a workaround.** The entrypoint
+   gates the whole group on `SMTP_URL`, so omitting it boots cleanly with mail
+   off. The consequences are exactly those named below when this item was first
+   opened: no password reset, no email verification, no MFA recovery. That
+   directly blocks section 4.6 checkpoint 6, which calls for rotating the
+   break-glass credential to a named human account with MFA, since the
+   enrolment mail cannot be delivered. Break-glass therefore stays the
+   generated password at `/data/rauthy/admin-password` until this closes.
+
+   The original wiring, which remains in the image and is still correct:
+
+   The entrypoint
    exported no mail configuration, so rauthy kept its `smtp_url = 'localhost'`
    default and every send failed: no password reset, no email verification, no
    MFA recovery. It was closed rather than carried because the cost was eight
