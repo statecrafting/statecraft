@@ -361,6 +361,17 @@ each value. **It holds no values.** From it:
   `flux-system` and never committed; the public key is committed so any
   operator can encrypt.
 
+  **The control plane's own Secrets joined this tier on 2026-07-20**:
+  `statecraft-secrets` (the nine keys of spec 009 §2.2) and
+  `statecraft-platform-backup` (the `PLATFORM_S3_*` group, mounted only on
+  the `/data` backup CronJob). They live here rather than beside spec 009's
+  manifests for two mechanical reasons: `.sops.yaml`'s creation rule matches
+  only this directory, and this is the only Flux tier carrying a
+  `decryption:` block. That is what this section already anticipated when it
+  said spec 009 "re-encrypts it from the operator .env into the control-plane
+  namespace"; registering the two files is the coordinated edit that
+  prediction implied.
+
 **The operator `.env` is the origin of record for the material the
 platform still needs from an operator**, which after §2.1 is a much
 smaller set: the cluster and provider credentials, the nine keys the pod
