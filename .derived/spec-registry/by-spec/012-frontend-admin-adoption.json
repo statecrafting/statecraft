@@ -34,7 +34,7 @@
       }
     ],
     "id": "012-frontend-admin-adoption",
-    "implementation": "in-progress",
+    "implementation": "complete",
     "sectionHeadings": [
       "012: frontend-admin adoption",
       "1. Purpose",
@@ -43,6 +43,7 @@
       "4. Behavior",
       "5. Acceptance",
       "5.1 Implementation notes (2026-07-22)",
+      "5.2 Closure (2026-07-22): live acceptance holds",
       "6. Out of scope"
     ],
     "specPath": "specs/012-frontend-admin-adoption/spec.md",
@@ -50,6 +51,6 @@
     "summary": "statecraft adopts the substrate's flag-gated admin dashboard (enrahitu specs 022/023: the observability contract and frontend-admin) as the platform operator dashboard promised by thesis section 3.4: same-origin, gated on statecraft_operator, rendering the platform's own /metrics, traces, service catalog, and app model. This is the piece specs 001 and 010 already committed to (\"platform observability is the in-substrate flag-gated admin dashboard\"; cluster Grafana was dropped on that promise), landing as a chassis capability consumed here, not as platform-original code. The domain operator console (all-tenants, spec 011) stays in frontend/; frontend-admin is the substrate observability surface. The platform's /metrics becomes the scrape target for spec 010's in-cluster Prometheus and must not be exposed at the public ingress.\n",
     "title": "frontend-admin adoption: the platform operator dashboard"
   },
-  "shardHash": "9f4e0abc60f8ccd03813156dccf16d3ae188b096ce7c478430e80128a89755e7",
+  "shardHash": "cde0943cbf6e0b2bc733e6bc893b364845597a9e1c2de236872e4c08b9621812",
   "specVersion": "1.1.0"
 }

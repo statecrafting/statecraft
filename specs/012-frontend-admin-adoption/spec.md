@@ -3,7 +3,7 @@ id: "012-frontend-admin-adoption"
 title: "frontend-admin adoption: the platform operator dashboard"
 status: approved
 created: "2026-07-21"
-implementation: in-progress
+implementation: complete
 depends_on:
   - "001-statecraft-thesis"
   - "002-app-shell"
@@ -188,6 +188,47 @@ families and the counters move; the SSE stream opens; the kill switch
 404s both surfaces with `/metrics` unaffected. Acceptance 1-4's live
 (cluster) arms and 5's CI arm remain for the deploy; status flips to
 complete when they hold at app.statecraft.ing.
+
+## 5.2 Closure (2026-07-22): live acceptance holds
+
+Deployed as image digest `ce8edee5` (spec 009's re-pin amendment) and
+verified against app.statecraft.ing:
+
+1. **Operator sees live platform data (acceptance 1).** The operator
+   (`statecraft_operator` holder) loaded `/admin` at the platform
+   origin: Overview renders the model identity (statecraft /
+   statecrafting, app-model v0.1.0, model + gate hashes, 12 services /
+   57 endpoints / 0 capabilities), the observability posture
+   (`/metrics`, OTel on), the operator role, trust levels, gate checks,
+   and the verified attestation chain; Catalog lists all twelve
+   services, and the inline API caller executed a real
+   `GET /health` round trip (200, ~168ms) whose trace, alongside the
+   readiness probe's steady `health.health` traffic, appears in Traces
+   with the `coreledger.read` child span correctly parented and the
+   request attributes populated.
+2. **The gate (acceptance 2).** Signed-out `/admin` 302s to login and
+   the admin API answers 401 at the public origin (verified live);
+   the non-operator `permissionDenied` arm was proven against the same
+   server-side code path in the local run above.
+3. **Prometheus + ingress posture (acceptance 3).** The in-cluster
+   Prometheus shows the pod target UP under the
+   `statecraft-annotated-pods` job with `http_requests_total`
+   queryable; public `https://app.statecraft.ing/metrics` serves 403
+   from the metrics-deny Ingress.
+4. **The model records the posture (acceptance 4).** The committed
+   `app-model.json` (otel: true, operator role `statecraft_operator`)
+   is what the Overview renders. One reading note: the model's
+   `source` block records the extract-time git state, and extraction
+   necessarily precedes the commit that carries its output, so the
+   `uncommittedChanges: true` badge on the Overview is a property of
+   the producer, not evidence of prod drift; the freshness gate
+   ignores `source` for exactly this reason.
+5. **Gates (acceptance 5).** verify + govern CI green on PRs #55/#56;
+   the chassis npm gates and the model check run in both workflows.
+
+Follow-ups landed the same day on the spec 011 trail: `RAUTHY_API_KEY`
+mounted (PR #57) and the GitHub provider's `auto_onboarding` flipped by
+the operator. Spec 011's own live acceptance walk remains its own work.
 
 ## 6. Out of scope
 
