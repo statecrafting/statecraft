@@ -51,13 +51,14 @@ spec:
         - name: statecraft
           # Pinned by digest, never `:latest`. The tag is recorded alongside
           # for human legibility only; the digest is what is deployed.
-          # tag: 4d0a392 (009-proxy-secfetch, 2026-07-21) - the rauthy proxy
-          # strips Sec-Fetch-* so the GitHub upstream login callback is not
-          # blocked as a forged cors request (spec 002, fifth chassis hunk). The
-          # prior digest (baf41728, built from 2e3c9d7) added SMTP 587/STARTTLS
-          # but still corrupted Sec-Fetch-Mode in the proxy, so upstream login's
-          # return leg 400'd.
-          image: ghcr.io/statecrafting/statecraft@sha256:e4cc8b90f07b6d0ccd7074b1eecef94f1d262250aad240f0cec094b07dd90d9d
+          # tag: dfe27c1 (012-frontend-admin-adoption merge, 2026-07-22) - the
+          # operator dashboard adoption (spec 012): backend/obs/ (/metrics +
+          # the trace plane), backend/admin/ + the frontend-admin bundle gated
+          # on statecraft_operator, app-model.json in the image, and the spec
+          # 011 tenant-lifecycle code's first deploy (its user_account ALTER
+          # was applied to the live database before this pin). The prior
+          # digest (e4cc8b90, built from 4d0a392) is the Sec-Fetch proxy fix.
+          image: ghcr.io/statecrafting/statecraft@sha256:ce8edee50114b655859e8d5b8c9e37fc9c5934de1daa402b47a7a9bf6faa2bca
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

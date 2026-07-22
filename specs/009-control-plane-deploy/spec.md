@@ -1140,6 +1140,18 @@ Live bring-up is operator work, proposed here rather than performed.
   structural, not deferred tuning).
 - Re-homing the marketing site: the apex stays GitHub Pages.
 
+## Amendment (2026-07-22): re-pin to the spec 012 image
+
+The Deployment moves to digest `ce8edee5` (tag `dfe27c1`, the spec 012
+merge): the first image carrying the operator dashboard (spec 012) and
+the spec 011 tenant-lifecycle code. The spec 011 §9 one-time
+`user_account` ALTER (github_user_id + github_login) was applied to the
+live database before this pin (its stamp_job precursor already
+existed), so the new image's auth store boots against a compatible
+schema. `RAUTHY_API_KEY` remains unminted (spec 011's remaining
+deploy-time act); github-identity resolution degrades to a logged
+`no_api_key` skip until it exists, which blocks nothing in this deploy.
+
 ## Amendment (2026-07-22): spec 012 frontend-admin adoption, deploy env
 
 Spec 012 makes one coordinated edit in this spec's deploy manifest
