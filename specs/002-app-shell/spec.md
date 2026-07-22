@@ -317,3 +317,20 @@ non-federated accounts), and `rauthy.ts` calls a login hook that resolves
 that identity and reconciles org-derived tenant memberships. Spec 011 also
 establishes a new file inside this directory, `backend/auth/github-identity.ts`,
 which it owns. See specs/011-tenant-lifecycle/spec.md §5.1, §5.3.
+
+## Amendment (2026-07-22): the toolchain + hiqlite repoint to @statecrafting
+
+The chassis's build toolchain and hiqlite addon, which §2 imported as pinned
+`@enrahitu/*` npm packages, now come from the `@statecrafting` scope
+(statecrafting specs 002/003), matching the governance and fleet addons this app
+already consumes there. `package.json` moves `@enrahitu/toolchain@0.1.0` to
+`@statecrafting/toolchain@0.2.0` and `@enrahitu/hiqlite-native@0.1.0` to
+`@statecrafting/hiqlite-native@0.1.0`; `backend/hiq/init.ts` and
+`vitest.config.ts` import the new specifiers; the image workflow stages the
+runtime from `@statecrafting/toolchain-linux-x64`. The stamped-app shape §2
+describes is unchanged: the toolchain still arrives as a devDependency of
+prebuilt binaries with no vendored source, `enrahitu-dev`/`enrahitu-build` keep
+their bin names, and the substrate-name convention (§2 item 2) simply reads
+`@statecrafting/*` now. The `0.2.0` toolchain adds the app-model extractor
+(statecrafting spec 002 amendment), which this app does not use, so nothing else
+changes here.
