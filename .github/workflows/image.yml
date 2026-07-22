@@ -51,10 +51,16 @@ jobs:
       # runs `vite build`, it does not install. Install its deps first.
       - name: Install the frontend (SPA) deps
         run: npm --prefix frontend ci
+      - name: Install the admin dashboard deps (spec 012)
+        run: npm --prefix frontend-admin ci
       - name: Build the SPA (into backend/web/dist)
         run: npm run build:web
+      - name: Build the admin dashboard (into backend/web/dist-admin, spec 012)
+        run: npm run build:web-admin
       - name: Build the app bundle (npm toolchain)
         run: npm run build:app
+      - name: App model freshness (spec 012; the image carries app-model.json)
+        run: npm run check:model
       - name: Stage the linux Encore runtime + docker infra config
         run: |
           set -euo pipefail

@@ -61,4 +61,9 @@ encore.gen.cue
 !backend/web/dist/
 backend/web/dist/*
 !backend/web/dist/index.html
+# Same pattern for the admin dashboard bundle (frontend-admin/ builds here,
+# spec 012): track only the dev placeholder.
+!backend/web/dist-admin/
+backend/web/dist-admin/*
+!backend/web/dist-admin/index.html
 

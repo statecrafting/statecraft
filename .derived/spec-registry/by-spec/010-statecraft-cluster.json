@@ -29,13 +29,14 @@
       "DNS",
       "5. Acceptance",
       "6. Human checkpoints",
-      "7. Out of scope"
+      "7. Out of scope",
+      "Amendment (2026-07-22): spec 012 frontend-admin adoption, the scrape lands"
     ],
     "specPath": "specs/010-statecraft-cluster/spec.md",
     "status": "approved",
     "summary": "The statecraft-owned hetzner-k3s cluster, reconciled by Flux from an in-repo GitOps tree, with one documented secret source that generates the operator `.env.example` and the SOPS-encrypted secrets Flux decrypts in-cluster. Rewritten ground-up 2026-07-19 to the two-plane thesis (001 §3): identity and observability moved inside the control-plane container, so the cluster keeps only what a container cannot do for itself. The standalone cluster rauthy is retired (embedded rauthy is THE platform IdP) and cluster Grafana is dropped with its OIDC client (platform observability is the in-substrate flag-gated admin dashboard); Prometheus is kept, demoted to an unexposed in-cluster metrics sink. What stands: the Flux tree, SOPS, cert-manager, ingress-nginx, reflector, Postgres, NSQ, and Hetzner Object Storage. The cluster is live (PRs #27-#29); this rewrite is the first change that prunes services from it. Amended 2026-07-20 on explicit operator authorization, closing spec 009 checkpoint 1: the claim that every `RAUTHY_*` key survives the move into the container is corrected to the verified image behavior, which self-seeds its own identity. The catalog goes from 47 keys to 33, `auth.<DOMAIN>` is settled as not returning, and the keys a deploy genuinely owes the container are named.\n",
     "title": "The statecraft cluster: the substrate beneath the control-plane container"
   },
-  "shardHash": "4dda8c27db4132e6047a40f530c0267c15b8c3f17d6da565aa9c0e5ad06d4019",
+  "shardHash": "4dd4c4d4a4a78cc845d2799b0e1eacffef76c2b87a5f3c41152cc550b75158ce",
   "specVersion": "1.1.0"
 }

@@ -6,6 +6,20 @@
  */
 import { APIError } from "encore.dev/api";
 
+import { modelJson } from "./app-model";
+
+/**
+ * The <app>_operator role convention (enrahitu spec 001 §4.4, spec 023;
+ * adopted under spec 012): read from the loaded model's auth.operatorRole so
+ * the platform gates on its own name, statecraft_operator. The tenants
+ * service's OPERATOR_ROLE constant (spec 011) names the same role; a test
+ * pins their agreement.
+ */
+export function operatorRole(): string {
+  const model = JSON.parse(modelJson) as { auth?: { operatorRole?: string } };
+  return model.auth?.operatorRole ?? "statecraft_operator";
+}
+
 export function hasRole(roles: string[], required: string | string[]): boolean {
   const needed = Array.isArray(required) ? required : [required];
   if (needed.length === 0) return true;

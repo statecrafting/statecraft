@@ -18,6 +18,11 @@ const FIXTURE = readFileSync(
   "utf8",
 );
 
+const FIXTURE_0_6 = readFileSync(
+  join(process.cwd(), "backend/factory/fixtures/template.v0_6_0.toml"),
+  "utf8",
+);
+
 describe("readContract (real pinned template, contract 0.5.0)", () => {
   const c = readContract(FIXTURE);
 
@@ -43,6 +48,31 @@ describe("readContract (real pinned template, contract 0.5.0)", () => {
   });
 
   it("declares a usable scaffold verb and cert support", () => {
+    expect(hasScaffoldVerb(c)).toBe(true);
+    expect(supportsCert(c)).toBe(true);
+  });
+});
+
+describe("readContract (real pinned template, contract 0.6.0 with the admin slot)", () => {
+  const c = readContract(FIXTURE_0_6);
+
+  it("accepts the 0.6.0 contract within the major-0 range (spec 012)", () => {
+    expect(c.contractVersion).toBe("0.6.0");
+    expect(isSupportedContract(c.contractVersion)).toBe(true);
+    expect(() => assertSupportedContract(c)).not.toThrow();
+  });
+
+  it("parses the admin slot the reader predates (enrahitu spec 023 §4.1 tolerance)", () => {
+    expect(c.slots.admin?.default).toBe("on");
+    expect(c.slots.admin?.allowed).toEqual(["on", "off"]);
+  });
+
+  it("stamps with the existing slot API unchanged (admin rides its default)", () => {
+    expect(validateSlots(c, { appName: "smoke-app", org: "acme" })).toEqual({
+      appName: "smoke-app",
+      org: "acme",
+      frontend: "vue",
+    });
     expect(hasScaffoldVerb(c)).toBe(true);
     expect(supportsCert(c)).toBe(true);
   });

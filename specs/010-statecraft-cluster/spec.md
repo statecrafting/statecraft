@@ -603,3 +603,25 @@ than performed:
   already uses), specced then, against a real caller.
 - Non-hetzner targets, and multi-cluster or HA topologies.
 - Re-homing the marketing site: the apex stays GitHub Pages.
+
+## Amendment (2026-07-22): spec 012 frontend-admin adoption, the scrape lands
+
+Spec 012 makes two coordinated edits in this spec's `infra/` territory,
+cashing the promise the monitoring header records ("platform
+observability is the in-substrate flag-gated frontend-admin"):
+
+- **Prometheus gains its first platform target.** The statecraft pod
+  template (spec 009's deployment.yaml) now carries the
+  `prometheus.io/scrape|port|path` annotations the existing
+  `statecraft-annotated-pods` job already selects on, so the in-cluster
+  Prometheus scrapes the app's own `/metrics` (enrahitu spec 022
+  contract) directly on the pod, never through the ingress. No change
+  to monitoring.yaml itself.
+- **`/metrics` stays off the public origin.** `statecraft/ingress.yaml`
+  gains a second Ingress (`statecraft-metrics-deny`,
+  spec-labeled 012): an Exact `/metrics` location whose
+  `whitelist-source-range` allows only 127.0.0.1/32, so nginx's exact
+  match beats the `/` prefix and every public request gets 403 while
+  `/admin` and `/api/admin/*` stay routed (they are gated in-app,
+  server-side). A separate resource because the allowlist annotation
+  applies per-Ingress and must not touch the `/` paths.

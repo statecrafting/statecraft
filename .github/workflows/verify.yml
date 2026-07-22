@@ -45,15 +45,21 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             frontend/package-lock.json
+            frontend-admin/package-lock.json
       # No cargo cache and no addon build: governance-native and fleet-native
       # are published @statecrafting packages now (statecrafting specs 005/006),
       # so npm ci installs their prebuilt per-platform binaries.
       - run: npm ci
       - run: npm --prefix frontend ci
+      - run: npm --prefix frontend-admin ci
       - name: Build web (SPA into backend/web/dist)
         run: npm run build:web
+      - name: Build admin dashboard (into backend/web/dist-admin, spec 012)
+        run: npm run build:web-admin
       - name: Build app (generates encore.gen)
         run: npm run build:app
+      - name: App model freshness (spec 012)
+        run: npm run check:model
       - name: Typecheck and test (both CoreLedger drivers)
         env:
           TEST_POSTGRES_URL: postgres://statecraft:statecraft@localhost:5432/statecraft_test

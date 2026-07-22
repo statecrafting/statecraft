@@ -15,6 +15,8 @@
  * - `ENRAHITU_LEDGER_POOL_SIZE`          Postgres pool max (default 10)
  */
 
+import { instrumentDriver } from "../../obs/instrument";
+
 import type { LedgerDriver, LedgerTx, SqlRow, SqlValue } from "./driver";
 import { LibsqlDriver } from "./libsql";
 import type { EntityCtor } from "./metadata";
@@ -50,7 +52,9 @@ export class Ledger {
   constructor(readonly driver: LedgerDriver) {}
 
   static fromEnv(): Ledger {
-    return new Ledger(driverFromEnv());
+    // Instrumentation wraps outermost (enrahitu spec 022, adopted under spec
+    // 012): operation spans and counters cover the whole driver call.
+    return new Ledger(instrumentDriver(driverFromEnv(), "app"));
   }
 
   /** Create tables/indexes for the given (default: all) registered entities. */

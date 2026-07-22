@@ -237,3 +237,16 @@ territory: `api.ts` adopts the shared `authorizeTenant` helper (spec 011
 tenant member reach `stamp` on the ordinary endpoint (spec 011 §5.8). The
 active-installation precondition on `createStamp` is unchanged. See
 specs/011-tenant-lifecycle/spec.md §5.7, §5.8.
+
+## Amendment (2026-07-22): spec 012, the contract 0.6.0 fixture
+
+Spec 012 makes one coordinated edit in this spec's `backend/factory/`
+territory: `fixtures/template.v0_6_0.toml` (the real enrahitu
+template.toml at contract 0.6.0, which adds the `admin` slot and bumps
+`requires.toolchain` to `^0.3`; enrahitu spec 023) joins the pinned
+0.5.0 fixture, and `contract.test.ts` proves this spec's reader against
+it: 0.6.0 sits inside the supported major-0 range, the unknown `admin`
+slot parses and is ignored by `validateSlots`, and stamping rides the
+slot's default. This closes the cross-repo arm of enrahitu spec 023
+acceptance 4 that its §4.1 assigned to statecraft spec 012. No reader
+code changed.

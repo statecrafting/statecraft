@@ -333,4 +333,33 @@ prebuilt binaries with no vendored source, `enrahitu-dev`/`enrahitu-build` keep
 their bin names, and the substrate-name convention (§2 item 2) simply reads
 `@statecrafting/*` now. The `0.2.0` toolchain adds the app-model extractor
 (statecrafting spec 002 amendment), which this app does not use, so nothing else
-changes here.
+changes here. (Superseded the same day by the spec 012 amendment below: the
+toolchain moves to `0.3.0` and its extractor modules become the platform's
+model producer.)
+
+## Amendment (2026-07-22): spec 012 frontend-admin adoption, chassis plumbing
+
+Spec 012 adopts the chassis observability + admin surfaces (enrahitu specs
+022/023 at commit `950a9be`) and makes these coordinated edits inside this
+spec's territory; spec 012 §5.1 records the design.
+
+- `backend/obs/` and `backend/admin/` (established by spec 012) join the
+  service tree; `obsMiddleware` mounts outermost on every API service
+  (auth, factory, fleet, governance, health, hiq, idp, tenants), `web`
+  stays uninstrumented, and `core/ledger`'s `Ledger.fromEnv` wraps
+  `instrumentDriver` around the driver.
+- `backend/lib/` gains `app-model.ts` (the fail-closed model loader, the
+  platform's stand-in for the chassis kernel boot) and `jwt-verify.ts`
+  (the public-key-only verification split; `jwt.ts` re-exports);
+  `roles.ts` gains `operatorRole()` reading the model; `env.ts` gains
+  `adminUiEnabled` (`ADMIN_UI_ENABLED`, default true); `auth/mock.ts`
+  gains the fourth (operator) principal.
+- Build wiring: `package.json` moves `@statecrafting/toolchain` to
+  `0.3.0` and adds prom-client + the OTel packages, plus the
+  `dev:web-admin`/`build:web-admin`/`extract:model`/`check:model`
+  scripts; `tsconfig.json`/`vitest.config.ts` exclude `frontend-admin`;
+  `verify.yml` and `image.yml` install/build the dashboard and run the
+  model freshness check; `.gitignore` and `backend/web/dist-admin/`
+  follow the dist placeholder pattern; `spec-spine.toml` lists
+  `frontend-admin` as a standalone npm package and hashes
+  `app-manifest.json`.

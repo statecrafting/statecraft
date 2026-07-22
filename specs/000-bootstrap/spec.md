@@ -38,3 +38,13 @@ Specs declare typed edges (`establishes`, `extends`, `refines`,
 `supersedes`, `amends`, `co_authority`, `constrains`, `references`) and
 the units they own (file / section / symbol / directory / crate / module).
 Authority is derived by walking the graph.
+
+## Amendment (2026-07-22): spec 012 config pointers
+
+Spec 012 (frontend-admin adoption) makes two coordinated edits in this
+spec's `spec-spine.toml`: `frontend-admin` joins
+`standalone_npm_packages` (the operator dashboard is a standalone npm
+package on the chassis convention, spec-linked to 012), and
+`app-manifest.json` joins `[index] extra_hashed_inputs` (the model
+manifest is governance surface; edits to it must trip index staleness).
+See specs/012-frontend-admin-adoption/spec.md §5.1.

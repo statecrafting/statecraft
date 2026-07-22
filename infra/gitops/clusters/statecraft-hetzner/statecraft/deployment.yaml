@@ -24,6 +24,14 @@ spec:
     metadata:
       labels:
         app: statecraft
+      # Spec 012: the in-cluster Prometheus (spec 010 monitoring.yaml,
+      # statecraft-annotated-pods job) scrapes the platform's own /metrics
+      # (enrahitu spec 022 contract) directly on the pod. The public ingress
+      # deliberately does not route /metrics (ingress.yaml).
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       # The image declares no USER, so it runs as root and writes /data,
       # /rauthy, and /data/rauthy/db directly. runAsNonRoot is deliberately
@@ -160,6 +168,16 @@ spec:
             # /data, which is what STATE_DIR below is.
             - name: STATECRAFT_GOVERNANCE_STATE_DIR
               value: "/data/governance/state"
+            # ---------------------------------------------------------------
+            # The operator dashboard (spec 012). Explicit rather than relying
+            # on the code default (also true) so the runtime kill switch is
+            # discoverable here: flipping this to "false" serves 404 on /admin
+            # and /api/admin/* without a rebuild. OTEL_EXPORTER_OTLP_ENDPOINT
+            # is deliberately unset: no collector exists (enrahitu spec 022);
+            # traces live in the in-app ring buffer the dashboard renders.
+            # ---------------------------------------------------------------
+            - name: ADMIN_UI_ENABLED
+              value: "true"
           # The seven keys of spec 009 section 2.2, and no others. Notably
           # absent: the four JWT_* PEMs and RAUTHY_CLIENT_SECRET, which the
           # entrypoint unconditionally overwrites from /data. Injecting them
