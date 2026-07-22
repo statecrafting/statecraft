@@ -960,11 +960,11 @@ check is wanted, not OAP's service-specific fan-out.
   returns an issuer of `https://app.statecraft.ing/auth/v1/`, and no
   `auth.statecraft.ing` host resolves.
 - A real login completes end to end against the container's embedded rauthy.
-  This closes spec 010's deferred acceptance.
+  This closes spec 010's deferred acceptance. **(Met 2026-07-22, checkpoint 5.)**
 - A GitHub upstream login completes, proving the seeder's provider
   configuration (section 4.5).
 - An account holding `statecraft_operator` presents that role in its claims,
-  observable through the app's own user model.
+  observable through the app's own user model. **(Met 2026-07-22, checkpoint 5.)**
 - Prometheus shows control-plane series arriving by `remote_write`.
 - The volume backup of section 4.3 rule 2 exists and a restore has been
   rehearsed at least once.
@@ -995,9 +995,11 @@ initialized rauthy hiqlite database all exist under `/data`.
 
 **Not met, and not to be read as nearly met:**
 
-- **A real login has not completed end to end**, so spec 010's deferred
-  acceptance stays deferred, and the `statecraft_operator` claim has not been
-  observed reaching the app's user model (checkpoint 5).
+- ~~A real login has not completed end to end~~ **Closed 2026-07-22
+  (checkpoint 5).** The operator-admin login and the `statecraft_operator`
+  grant both landed, so this item and the operator-claim item are met and
+  spec 010's deferred login acceptance closes with them; see the 2026-07-22
+  closure below.
 - **Fail-loud is exercised and does not hold.** The deliberate test section 5
   asks for was run on 2026-07-21, and it disproved the mechanism rather than
   confirming it: a removed required secret yields a healthy pod and a silent
@@ -1020,6 +1022,32 @@ initialized rauthy hiqlite database all exist under `/data`.
 - **Mail delivers.** SMTP was disabled during the SMTP-port incident and is
   restored on 587 with STARTTLS (section 4.8 item 1). Checkpoint 6 is unblocked
   as a result, though the rotation it calls for is still operator work.
+
+**Closed 2026-07-22: the operator grant and the real login.** Checkpoint 5 is
+closed and both its acceptance items are met, each verified against the live
+system:
+
+- **The grant landed.** `statecraft_operator` was added to
+  `admin@statecraft.ing` alongside its existing `rauthy_admin` and `admin`
+  (appended, never replaced, so break-glass is intact). The rauthy hiqlite
+  `users` row now reads `admin,rauthy_admin,statecraft_operator`.
+- **The claim reaches the app's user model.** After a fresh app login the
+  CoreLedger `user_account` row for the operator reads
+  `["admin","rauthy_admin","statecraft_operator"]` with a `last_login_at`
+  after the grant. That row is exactly what `GET /api/v1/auth/me` returns
+  (`backend/auth/me.ts`), so the OIDC `roles` claim provably flows
+  claim -> `profileFromClaims` -> `upsertUserFromProfile` -> user model. This
+  is the real end-to-end login that also closes spec 010's deferred login
+  acceptance.
+- **The grant is operator work because the admin account is passkey-gated,
+  which section 4.5 did not record.** `admin@statecraft.ing` has a registered
+  WebAuthn passkey (`RauthyAdmin`), so `POST /auth/v1/oidc/authorize` returns
+  the `WebauthnLoginResponse` MFA challenge (HTTP 200, "correct credentials,
+  needs Webauthn MFA") after a correct password. No `rauthy_admin` session,
+  and therefore no role grant, can be obtained without the physical
+  authenticator; the grant was performed through the admin UI by the operator.
+  The next operator provisioning an `<app>_operator` role will hit the same
+  wall, which is why it is named here rather than left to rediscovery.
 
 **Three defects blocked first boot, and none was caught by any gate.** Each is
 recorded where it belongs (4.8 item 5, 4.4, and 4.8 item 1) rather than
@@ -1058,14 +1086,20 @@ Live bring-up is operator work, proposed here rather than performed.
    firewall rules. **CLOSED 2026-07-21:** `app.statecraft.ing` resolves to the
    worker and `auth.statecraft.ing` is NXDOMAIN, both verified live.
 5. **Grant `statecraft_operator`** to the first operator account, and confirm
-   the claim reaches the app. **Partially done 2026-07-21:** the GitHub
-   upstream provider and the `statecraft_operator` role were both created by
-   hand through the admin UI, which is the section 4.5 fallback rather than the
-   seeder Job. The provider is confirmed live by
-   `GET /auth/v1/providers/minimal`. **The grant and the claim check remain
-   open**, and they are the substance of this checkpoint: creating a role is
-   provisioning, granting it is the authorization decision, and observing it in
-   the app's user model is what proves the claim path works end to end.
+   the claim reaches the app. **CLOSED 2026-07-22.** The role was granted to
+   `admin@statecraft.ing` through the admin UI (appended to `rauthy_admin` and
+   `admin`, so break-glass is preserved), and the claim was verified reaching
+   the app end to end: after a fresh login the CoreLedger `user_account` row,
+   the exact payload `GET /api/v1/auth/me` serves, reads
+   `["admin","rauthy_admin","statecraft_operator"]` with a post-grant
+   `last_login_at`. The grant is an admin-UI action rather than an automated
+   step for two reasons: the seeder Job that would carry a `roles.json` is not
+   shipped (section 4.5), and the admin account is passkey-gated, so a correct
+   password yields only a `WebauthnLoginResponse` MFA challenge and an admin
+   session needs the operator's physical authenticator (recorded in section
+   5.1's 2026-07-22 closure). Granting a role is the authorization decision,
+   which is why it stayed a human step. The GitHub upstream provider was
+   already confirmed live 2026-07-21 by `GET /auth/v1/providers/minimal`.
 6. **Take custody of the break-glass admin credential** (section 4.6): read it
    from the volume, rotate it to a named account with MFA, and record where it
    lives. **Unblocked 2026-07-21** now that SMTP delivers on 587 (section 4.8
