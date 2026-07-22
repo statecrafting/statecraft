@@ -1189,3 +1189,17 @@ remove, and operator membership revoke were unusable from the UI), and
 the dashboard gains the spec 011 §5.6 tenant-less install entry. No
 schema or secret deltas; a pod delete after the Flux apply picks up the
 image.
+
+## Amendment (2026-07-22): fleet placement RBAC
+
+Spec 011's acceptance walk surfaced that the pod ran as the namespace
+default ServiceAccount with no cluster grants, so every fleet placement
+and teardown died Forbidden at the API server (spec 006's first-deploy
+"works at placement" finding predates the cluster rebuild; the rebuilt
+cluster never carried the grants). The manifests gain `rbac.yaml`: a
+dedicated `statecraft` ServiceAccount, a `statecraft-fleet` ClusterRole
+scoped to exactly the resource types fleet-native touches (namespaces
+get/list/create; deployments, services, PVCs, jobs, ingresses,
+networkpolicies full lifecycle), and its ClusterRoleBinding; the
+Deployment's pod template adopts the ServiceAccount. A ClusterRole
+because tenant namespaces (`t-<tenantId>`) are dynamic.

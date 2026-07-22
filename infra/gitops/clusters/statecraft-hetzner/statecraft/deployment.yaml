@@ -33,6 +33,8 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
+      # Fleet placement drives the cluster API from this pod (rbac.yaml).
+      serviceAccountName: statecraft
       # The image declares no USER, so it runs as root and writes /data,
       # /rauthy, and /data/rauthy/db directly. runAsNonRoot is deliberately
       # NOT set: setting it without runAsUser is what broke the fleet's first
