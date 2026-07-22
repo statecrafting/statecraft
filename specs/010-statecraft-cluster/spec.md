@@ -510,6 +510,9 @@ Gated on other specs, and not this spec's to close:
 - A real login completes against the control plane's embedded rauthy
   (009). This replaces the previous version's `auth.<domain>` and
   operator-admin-login acceptances, which retired with §2.1.
+  **Closed 2026-07-22 by spec 009 checkpoint 5:** the operator-admin login
+  completed end to end and the `statecraft_operator` claim was observed in
+  the control plane's own user model.
 
 ## 6. Human checkpoints
 
