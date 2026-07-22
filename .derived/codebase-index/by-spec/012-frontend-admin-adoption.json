@@ -1,0 +1,36 @@
+{
+  "diagnostics": {
+    "errors": [],
+    "warnings": [
+      {
+        "code": "W-001",
+        "message": "spec '012-frontend-admin-adoption' directory unit 'frontend-admin/' is not a directory",
+        "path": "frontend-admin/"
+      }
+    ]
+  },
+  "mapping": {
+    "dependsOn": [
+      "001-statecraft-thesis",
+      "002-app-shell",
+      "009-control-plane-deploy",
+      "011-tenant-lifecycle"
+    ],
+    "implementingPaths": [],
+    "resolvedUnits": [
+      {
+        "locations": [],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "directory",
+          "path": "frontend-admin/"
+        }
+      }
+    ],
+    "specId": "012-frontend-admin-adoption",
+    "specStatus": "approved"
+  },
+  "schemaVersion": "1.1.0",
+  "shardHash": "5aa00533cc629ec07dc28bf9071f6ac72de396cc8afe8c93efd1ed1fbb71557d"
+}
