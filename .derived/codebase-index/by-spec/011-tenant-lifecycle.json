@@ -1,0 +1,64 @@
+{
+  "diagnostics": {
+    "errors": [],
+    "warnings": [
+      {
+        "code": "W-001",
+        "message": "spec '011-tenant-lifecycle' directory unit 'backend/tenants/access/' is not a directory",
+        "path": "backend/tenants/access/"
+      },
+      {
+        "code": "W-001",
+        "message": "spec '011-tenant-lifecycle' file unit 'backend/auth/github-identity.ts' does not exist",
+        "path": "backend/auth/github-identity.ts"
+      },
+      {
+        "code": "W-001",
+        "message": "spec '011-tenant-lifecycle' directory unit 'frontend/src/routes/operator/' is not a directory",
+        "path": "frontend/src/routes/operator/"
+      }
+    ]
+  },
+  "mapping": {
+    "dependsOn": [
+      "001-statecraft-thesis",
+      "004-tenants-github-app",
+      "008-governance-attestation",
+      "009-control-plane-deploy"
+    ],
+    "implementingPaths": [],
+    "resolvedUnits": [
+      {
+        "locations": [],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "directory",
+          "path": "backend/tenants/access/"
+        }
+      },
+      {
+        "locations": [],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "directory",
+          "path": "frontend/src/routes/operator/"
+        }
+      },
+      {
+        "locations": [],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "file",
+          "path": "backend/auth/github-identity.ts"
+        }
+      }
+    ],
+    "specId": "011-tenant-lifecycle",
+    "specStatus": "approved"
+  },
+  "schemaVersion": "1.1.0",
+  "shardHash": "8cdd63214c8d88f11af459c4429ae53b806cded161bb2cc0e07e8f0734bf7607"
+}
