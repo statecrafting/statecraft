@@ -30,11 +30,41 @@ export async function listTenantsForOwner(ownerUserId: string): Promise<Tenant[]
   return tenants().findWhere({ ownerUserId }, { orderBy: "createdAt", direction: "desc" });
 }
 
+/** Every tenant, newest first (operator all-tenants view, spec 011 §5.8). */
+export async function listAllTenants(): Promise<Tenant[]> {
+  await dbReady;
+  return tenants().findWhere({}, { orderBy: "createdAt", direction: "desc" });
+}
+
+/** A tenant by id, no authorization folded in (spec 011 §3 authz lives in access/). */
+export async function getTenant(id: string): Promise<Tenant | null> {
+  await dbReady;
+  return tenants().findById(id);
+}
+
 /** A tenant the caller owns, or null (ownership check folded in to avoid leaks). */
 export async function getOwnedTenant(id: string, ownerUserId: string): Promise<Tenant | null> {
   await dbReady;
   const tenant = await tenants().findById(id);
   if (!tenant || tenant.ownerUserId !== ownerUserId) return null;
+  return tenant;
+}
+
+/**
+ * Create a tenant named after a GitHub org (spec 011 §5.6 self-serve entry).
+ * `ownerUserId` is empty for a direct-from-GitHub install where no app user is
+ * bound yet; access to such a tenant comes from a pending membership that
+ * attaches at login, or from a platform operator.
+ */
+export async function createTenantForOrg(name: string, ownerUserId: string): Promise<Tenant> {
+  await dbReady;
+  const trimmed = (name ?? "").trim().slice(0, 100) || "New tenant";
+  const tenant = Object.assign(new Tenant(), {
+    name: trimmed,
+    ownerUserId,
+    createdAt: new Date(),
+  });
+  await tenants().insert(tenant);
   return tenant;
 }
 
@@ -108,4 +138,16 @@ export async function setInstallationStatus(
 export async function activeInstallationForTenant(tenantId: string): Promise<Installation | null> {
   await dbReady;
   return installations().findOne({ tenantId, status: "active" } as Partial<Installation>);
+}
+
+/** Every active installation across all tenants (login-time reconciliation sweep, spec 011 §5.3). */
+export async function listAllActiveInstallations(): Promise<Installation[]> {
+  await dbReady;
+  return installations().findWhere({ status: "active" } as Partial<Installation>);
+}
+
+/** An installation by GitHub's numeric id, regardless of tenant (setup/webhook race guard). */
+export async function findInstallationById(installationId: string): Promise<Installation | null> {
+  await dbReady;
+  return installations().findOne({ installationId } as Partial<Installation>);
 }

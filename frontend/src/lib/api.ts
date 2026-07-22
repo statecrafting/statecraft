@@ -147,11 +147,20 @@ export interface AuthStatus {
   drivers: string[];
 }
 
+/** The platform operator role (spec 011 §3); the first consumer of Me.roles. */
+export const OPERATOR_ROLE = "statecraft_operator";
+
+export function isOperator(me: Me): boolean {
+  return me.roles.includes(OPERATOR_ROLE);
+}
+
 export const auth = {
   status: () => apiGet<AuthStatus>("/api/v1/auth/status"),
   drivers: () => apiGet<{ drivers: string[] }>("/api/v1/auth/drivers"),
   me: () => apiGet<Me>("/api/v1/auth/me"),
   logout: () => apiSend<{ redirectUrl: string }>("POST", "/api/v1/auth/logout"),
+  // Explicit org-membership refresh (spec 011 §5.3).
+  reconcile: () => apiSend<{ ok: boolean }>("POST", "/api/v1/auth/reconcile", {}),
 };
 
 // --- Tenants (backend/tenants, spec 004) -----------------------------------
@@ -193,7 +202,40 @@ export const tenants = {
   get: (id: string) => apiGet<TenantDetail>(`/api/v1/tenants/${id}`),
   installUrl: (id: string) =>
     apiGet<{ url: string }>(`/api/v1/tenants/${id}/github/install-url`),
+  // Tenant-less self-serve install URL (spec 011 §5.6): no tenant chosen, one
+  // is created named after the org the user installs into.
+  installUrlForUser: () => apiGet<{ url: string }>("/api/v1/github/install-url"),
   repos: (id: string) => apiGet<{ repos: RepoView[] }>(`/api/v1/tenants/${id}/repos`),
+  // Lifecycle exits (spec 011 §5.4, §5.5).
+  uninstall: (id: string) =>
+    apiSend<InstallationView>("DELETE", `/api/v1/tenants/${id}/github/installation`),
+  remove: (id: string, confirm: string) =>
+    apiSend<{ deleted: boolean }>("DELETE", `/api/v1/tenants/${id}`, { confirm }),
+};
+
+// --- Operator console (backend/tenants/access, spec 011 §5.8) --------------
+
+export interface OperatorTenantView {
+  id: string;
+  name: string;
+  ownerUserId: string;
+  createdAt: string;
+  installationStatus: string;
+  memberCount: number;
+  fleetAppCount: number;
+}
+
+export const operator = {
+  tenants: () => apiGet<{ tenants: OperatorTenantView[] }>("/api/v1/operator/tenants"),
+  grantMembership: (id: string, githubUserId: string, role: "admin" | "member") =>
+    apiSend<unknown>("POST", `/api/v1/operator/tenants/${id}/memberships`, {
+      githubUserId,
+      role,
+    }),
+  revokeMembership: (id: string, githubUserId: string) =>
+    apiSend<{ revoked: boolean }>("DELETE", `/api/v1/operator/tenants/${id}/memberships`, {
+      githubUserId,
+    }),
 };
 
 // --- Factory (backend/factory, spec 005) -----------------------------------

@@ -19,13 +19,14 @@
       "3. Behavior",
       "3.1 Stamp modes: create and adopt",
       "4. Acceptance",
-      "5. Out of scope"
+      "5. Out of scope",
+      "Amendment (2026-07-21): spec 011 tenant lifecycle"
     ],
     "specPath": "specs/005-factory-service/spec.md",
     "status": "approved",
     "summary": "The factory turns \"customer wants an app named X\" into a born-green repo in the customer's GitHub org: clone the pinned enrahitu template, read its template.toml contract (and nothing else), run the scaffold verb with the slot values, emit the born-with certificate and anchor it in the governance ledger, then land it: create a new repo and push (create mode) or open a pull request onto an existing repo (adopt mode), and watch the born-with verify workflow until green. Completes milestone M2 together with spec 004. The contract boundary is absolute: any factory behavior that depends on template internals beyond template.toml is a defect.\n",
     "title": "Factory: stamp EnRaHiTu apps into customer orgs"
   },
-  "shardHash": "63f1389c387ab1061b0567014223037962393f00e32425a60dbf4e3c17890db1",
+  "shardHash": "167d4cc761c4ea44d3da5a625265f48cdc21c0c91ff92c81e16b7ecb77eaf4ca",
   "specVersion": "1.1.0"
 }

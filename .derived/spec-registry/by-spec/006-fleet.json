@@ -23,13 +23,14 @@
       "2026-07-16: code fixes #2/#3 landed; live E2E still blocked on external state",
       "2026-07-16 (later): live E2E passed on deployd.xyz; 006 complete",
       "5. Out of scope",
-      "2026-07-20: the addon transferred out; this spec narrowed, not retired"
+      "2026-07-20: the addon transferred out; this spec narrowed, not retired",
+      "Amendment (2026-07-21): spec 011 tenant lifecycle"
     ],
     "specPath": "specs/006-fleet/spec.md",
     "status": "approved",
     "summary": "Milestone M3: operate stamped apps. The unit of placement is \"one EnRaHiTu container + one volume + one ingress\" on the existing hetzner-k3s cluster. deployd-api-rs (the OAP-era Rust K8s orchestrator, axum + hiqlite) donates its orchestration core as a napi-rs addon (the hiqlite-native pattern): the axum HTTP layer disappears, the K8s knowledge stays. A fleet/ Encore service exposes deploy / status / update / backup over the addon. Done-when is a fleet of ten stamped apps on one box with update and backup exercised.\n",
     "title": "Fleet: deployd's core as an in-process addon, placing EnRaHiTu apps"
   },
-  "shardHash": "0c433e50e1c42d4c5b0fbe4292bb83908c2fbc3835c3cc02331c46cc4ec83de8",
+  "shardHash": "f7071b3fa01280fd54be10cea714bced00ab912332902a72f2c30f24b670ab7e",
   "specVersion": "1.1.0"
 }

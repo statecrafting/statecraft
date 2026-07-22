@@ -8,15 +8,14 @@
 import { APIError, api } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 
+import { authorizeTenant, listAccessibleTenants, principalFrom } from "./access/authz";
 import { GITHUB_APP_SLUG, githubWebhookSecret } from "./config";
 import { Installation, Tenant } from "./entities";
 import { listInstallationRepos } from "./github-app";
 import { signState } from "./state";
 import {
   activeInstallationForTenant,
-  getOwnedTenant,
   listInstallationsForTenant,
-  listTenantsForOwner,
   tenants,
 } from "./store";
 
@@ -99,7 +98,7 @@ export const list = api(
   { expose: true, auth: true, method: "GET", path: "/api/v1/tenants" },
   async (): Promise<ListTenantsResponse> => {
     const auth = getAuthData()!;
-    const rows = await listTenantsForOwner(auth.userID);
+    const rows = await listAccessibleTenants(principalFrom(auth));
     return { tenants: rows.map(toTenantView) };
   },
 );
@@ -114,7 +113,7 @@ export const detail = api(
   { expose: true, auth: true, method: "GET", path: "/api/v1/tenants/:id" },
   async ({ id }: { id: string }): Promise<TenantDetailResponse> => {
     const auth = getAuthData()!;
-    const tenant = await getOwnedTenant(id, auth.userID);
+    const tenant = await authorizeTenant(id, principalFrom(auth), "read");
     if (!tenant) throw APIError.notFound("tenant not found");
     const rows = await listInstallationsForTenant(id);
     return { tenant: toTenantView(tenant), installations: rows.map(toInstallationView) };
@@ -134,7 +133,7 @@ export const installUrl = api(
   { expose: true, auth: true, method: "GET", path: "/api/v1/tenants/:id/github/install-url" },
   async ({ id }: { id: string }): Promise<InstallUrlResponse> => {
     const auth = getAuthData()!;
-    const tenant = await getOwnedTenant(id, auth.userID);
+    const tenant = await authorizeTenant(id, principalFrom(auth), "read");
     if (!tenant) throw APIError.notFound("tenant not found");
     const state = signState(githubWebhookSecret(), { tenantId: id, userId: auth.userID });
     const url = `https://github.com/apps/${GITHUB_APP_SLUG}/installations/new?state=${encodeURIComponent(state)}`;
@@ -154,7 +153,7 @@ export const repos = api(
   { expose: true, auth: true, method: "GET", path: "/api/v1/tenants/:id/repos" },
   async ({ id }: { id: string }): Promise<ReposResponse> => {
     const auth = getAuthData()!;
-    const tenant = await getOwnedTenant(id, auth.userID);
+    const tenant = await authorizeTenant(id, principalFrom(auth), "read");
     if (!tenant) throw APIError.notFound("tenant not found");
     const installation = await activeInstallationForTenant(id);
     if (!installation) {

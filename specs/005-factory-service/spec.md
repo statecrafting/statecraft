@@ -228,3 +228,12 @@ customer tree. The pin is a tagged release, not a mid-branch SHA (spec 005 §3).
 - Template authoring, flavors' contents (enrahitu repo).
 - Multi-template support (one pinned chassis for now).
 - GitHub Enterprise/GHES endpoints.
+
+## Amendment (2026-07-21): spec 011 tenant lifecycle
+
+Spec 011 makes one coordinated edit in this spec's `backend/factory/`
+territory: `api.ts` adopts the shared `authorizeTenant` helper (spec 011
+§3) in place of the `ownerUserId` check, so a platform operator and a
+tenant member reach `stamp` on the ordinary endpoint (spec 011 §5.8). The
+active-installation precondition on `createStamp` is unchanged. See
+specs/011-tenant-lifecycle/spec.md §5.7, §5.8.

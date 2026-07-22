@@ -10,7 +10,8 @@ import { getAuthData } from "~encore/auth";
 import { governance } from "~encore/clients";
 
 import { logError, logInfo } from "../lib/logger";
-import { getOwnedTenant } from "../tenants/store";
+import { authorizeTenant, principalFrom } from "../tenants/access/authz";
+import { activeInstallationForTenant } from "../tenants/store";
 
 import { backupTarget, fleetBaseDomain, fleetImagePullSecret } from "./config";
 import type { FleetApp, FleetAppStatus } from "./entities";
@@ -20,8 +21,8 @@ import { isValidAppName } from "./ops";
 import {
   createApp,
   finishOp,
+  getAccessibleFleetApp,
   getApp,
-  getOwnedFleetApp,
   listAppsForTenant,
   namespaceFor,
   observeApp,
@@ -80,6 +81,19 @@ async function record(
   }
 }
 
+/**
+ * Provisioning verbs require an active installation (spec 011 §5.7). Teardown
+ * verbs (remove) never do, so cleanup of an unlinked tenant stays reachable.
+ */
+async function requireActiveInstallation(tenantId: string): Promise<void> {
+  const inst = await activeInstallationForTenant(tenantId);
+  if (!inst) {
+    throw APIError.failedPrecondition(
+      "tenant has no active GitHub App installation; install the App before provisioning",
+    );
+  }
+}
+
 interface DeployRequest {
   id: string;
   name: string;
@@ -97,8 +111,9 @@ export const deploy = api(
   { expose: true, auth: true, method: "POST", path: "/api/v1/tenants/:id/fleet" },
   async ({ id, name, image, volumeSize, stampJobId }: DeployRequest): Promise<FleetAppView> => {
     const auth = getAuthData()!;
-    const tenant = await getOwnedTenant(id, auth.userID);
+    const tenant = await authorizeTenant(id, principalFrom(auth), "write");
     if (!tenant) throw APIError.notFound("tenant not found");
+    await requireActiveInstallation(id);
 
     const appName = (name ?? "").trim().toLowerCase();
     if (!isValidAppName(appName)) {
@@ -164,7 +179,7 @@ export const status = api(
   { expose: true, auth: true, method: "GET", path: "/api/v1/fleet/:appId" },
   async ({ appId }: AppParams): Promise<FleetAppView> => {
     const auth = getAuthData()!;
-    const app = await getOwnedFleetApp(appId, auth.userID);
+    const app = await getAccessibleFleetApp(appId, principalFrom(auth), "read");
     if (!app) throw APIError.notFound("app not found");
     if (app.status === "removed") return toView(app);
 
@@ -193,10 +208,11 @@ export const update = api(
   { expose: true, auth: true, method: "POST", path: "/api/v1/fleet/:appId/update" },
   async ({ appId, image }: UpdateRequest): Promise<FleetAppView> => {
     const auth = getAuthData()!;
-    const app = await getOwnedFleetApp(appId, auth.userID);
+    const app = await getAccessibleFleetApp(appId, principalFrom(auth), "write");
     if (!app) throw APIError.notFound("app not found");
     const img = (image ?? "").trim();
     if (!img) throw APIError.invalidArgument("image is required");
+    await requireActiveInstallation(app.tenantId);
 
     const gated = await gateOrDeny("update", { tenantId: app.tenantId, app: app.name, image: img }, "strict");
     const op = await startOp(app.id, "update");
@@ -239,10 +255,11 @@ export const backup = api(
   { expose: true, auth: true, method: "POST", path: "/api/v1/fleet/:appId/backup" },
   async ({ appId }: AppParams): Promise<BackupResponse> => {
     const auth = getAuthData()!;
-    const app = await getOwnedFleetApp(appId, auth.userID);
+    const app = await getAccessibleFleetApp(appId, principalFrom(auth), "write");
     if (!app) throw APIError.notFound("app not found");
     const target = backupTarget();
     if (!target) throw APIError.failedPrecondition("backup target is not configured (FLEET_S3_RESTIC_PASSWORD / S3 keys)");
+    await requireActiveInstallation(app.tenantId);
 
     const gated = await gateOrDeny("backup", { tenantId: app.tenantId, app: app.name }, "soft");
     const op = await startOp(app.id, "backup");
@@ -273,7 +290,7 @@ export const remove = api(
   { expose: true, auth: true, method: "DELETE", path: "/api/v1/fleet/:appId" },
   async ({ appId, confirm }: RemoveRequest): Promise<FleetAppView> => {
     const auth = getAuthData()!;
-    const app = await getOwnedFleetApp(appId, auth.userID);
+    const app = await getAccessibleFleetApp(appId, principalFrom(auth), "write");
     if (!app) throw APIError.notFound("app not found");
     if ((confirm ?? "") !== app.name) {
       throw APIError.invalidArgument(`confirm must equal the app name "${app.name}"`);
@@ -311,9 +328,33 @@ export const listFleet = api(
   { expose: true, auth: true, method: "GET", path: "/api/v1/tenants/:id/fleet" },
   async ({ id }: TenantParams): Promise<ListFleetResponse> => {
     const auth = getAuthData()!;
-    const tenant = await getOwnedTenant(id, auth.userID);
+    const tenant = await authorizeTenant(id, principalFrom(auth), "read");
     if (!tenant) throw APIError.notFound("tenant not found");
     const rows = await listAppsForTenant(id);
     return { apps: rows.map(toView) };
+  },
+);
+
+interface TenantAppSummaryParams {
+  tenantId: string;
+}
+
+export interface TenantAppSummary {
+  /** Apps not in the terminal `removed` state (the delete-tenant precondition). */
+  activeCount: number;
+  total: number;
+}
+
+/**
+ * GET /fleet/internal/tenants/:tenantId/summary: app counts for a tenant.
+ * Internal (expose:false), called by the tenants service to enforce the
+ * delete-tenant precondition (spec 011 §5.5) without a tenants<->fleet cycle.
+ */
+export const tenantAppSummary = api(
+  { expose: false, method: "GET", path: "/fleet/internal/tenants/:tenantId/summary" },
+  async ({ tenantId }: TenantAppSummaryParams): Promise<TenantAppSummary> => {
+    const rows = await listAppsForTenant(tenantId);
+    const active = rows.filter((a) => a.status !== "removed");
+    return { activeCount: active.length, total: rows.length };
   },
 );

@@ -140,3 +140,16 @@ configuration, and this amendment is the design record of the decision.
 - Invites/multi-user tenants and roles beyond owner (later spec).
 - Repo creation and stamping (spec 005 consumes the token helper).
 - Billing/seats.
+
+## Amendment (2026-07-21): spec 011 tenant lifecycle
+
+Spec 011 completes the tenancy model this spec opened, and establishes a
+new nested-ownership directory it owns, `backend/tenants/access/`
+(membership, authorization, reconciliation, lifecycle, operator API).
+Coordinated edits inside this spec's `backend/tenants/` territory:
+`store.ts` gains plain getters and org-tenant/active-installation helpers;
+`api.ts` adopts the shared `authorizeTenant` helper and lists tenants the
+caller owns or is a member of; `setup.ts` grows the tenant-less install
+auto-create path; `webhook.ts` auto-provisions a tenant and pending
+membership on a direct-from-GitHub install. See
+specs/011-tenant-lifecycle/spec.md §3, §5.4-§5.6.

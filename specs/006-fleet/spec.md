@@ -356,3 +356,15 @@ are green there (12). The `fleet.statecraft.ing/app` label and the
 deliberately left alone. The section 3 note about `FLEET_S3_RESTIC_PASSWORD`
 being passed into the backup Job as restic's own `RESTIC_PASSWORD` still holds
 and is untouched.
+
+## Amendment (2026-07-21): spec 011 tenant lifecycle
+
+Spec 011 makes coordinated edits in this spec's `backend/fleet/` territory:
+`store.ts` replaces `getOwnedFleetApp` with `getAccessibleFleetApp`, which
+routes through the shared `authorizeTenant` helper (spec 011 §3), so
+operators and tenant members reach fleet verbs; `api.ts` adopts it,
+gates the provisioning verbs (deploy/update/backup) on an active
+installation (teardown stays ungated, spec 011 §5.7), and adds an internal
+`tenantAppSummary` endpoint the tenants service calls to enforce the
+delete-tenant precondition without a module cycle. See
+specs/011-tenant-lifecycle/spec.md §5.5, §5.7, §5.8.

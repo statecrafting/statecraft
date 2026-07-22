@@ -19,6 +19,7 @@ import { env } from "../lib/env";
 import { withinAuthRateLimit } from "../lib/rate-limit";
 import { rauthyClientSecretValue } from "../lib/secrets";
 
+import { syncFederatedMemberships } from "./github-identity";
 import { clientIp, redirect, requestUrl, userAgent } from "./http";
 import { finalizeLogin, frontendUrl } from "./service";
 import type { SSOProfile } from "./types";
@@ -134,8 +135,19 @@ export const rauthyCallback = api.raw(
 
     // Clear the transaction cookie, then finalize (which appends the auth cookies).
     res.setHeader("Set-Cookie", serializeCookie(OIDC_TX_COOKIE, "", authCookieOptions(0)));
-    const profile = profileFromClaims(claims as unknown as Record<string, unknown>);
-    await finalizeLogin(res, profile, { ipAddress: clientIp(req), userAgent: userAgent(req) });
+    const claimsRecord = claims as unknown as Record<string, unknown>;
+    const profile = profileFromClaims(claimsRecord);
+    const user = await finalizeLogin(res, profile, {
+      ipAddress: clientIp(req),
+      userAgent: userAgent(req),
+    });
+    // Resolve the GitHub identity and reconcile org-derived memberships (spec
+    // 011 §5.1, §5.3). Best-effort inside; a failure never breaks login.
+    const preferredUsername =
+      typeof claimsRecord["preferred_username"] === "string"
+        ? (claimsRecord["preferred_username"] as string)
+        : undefined;
+    await syncFederatedMemberships(user, { preferredUsername });
     redirect(res, frontendUrl("/"));
   },
 );

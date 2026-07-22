@@ -237,3 +237,11 @@ section 2 asked for, now holding across two repositories.
 
 Nothing in the addon's behavior or surface changed. Acceptance is unaffected:
 the service tests still pass against the published package.
+
+## Amendment (2026-07-21): spec 011 tenant lifecycle
+
+Spec 011 makes one coordinated edit in this spec's `backend/governance/`
+territory: `records.ts` adds a `tenant_delete` value to the
+`AttestationKind` union, so deleting a tenant (a privileged act) can be
+recorded in the attestation ledger. The gate and ledger behavior are
+otherwise unchanged. See specs/011-tenant-lifecycle/spec.md §5.5.

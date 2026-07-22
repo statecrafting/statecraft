@@ -21,13 +21,14 @@
       "5. Status (2026-07-15)",
       "Update 2026-07-15 (live verification -> `implementation: complete`)",
       "Update 2026-07-16 (chassis realignment: `webapp/` -> `frontend/`, back to `in-progress`)",
-      "Update 2026-07-18 (`webapp/` -> `frontend/` landed; `implementation: complete`)"
+      "Update 2026-07-18 (`webapp/` -> `frontend/` landed; `implementation: complete`)",
+      "Amendment (2026-07-21): spec 011 tenant lifecycle"
     ],
     "specPath": "specs/007-governance-webapp/spec.md",
     "status": "approved",
     "summary": "Replaces the chassis's placeholder Vue SPA with the control plane's real face: a Vite + React Router v7 single-page app served by the chassis web service from web/dist, same-origin with the API and the embedded rauthy IdP. v1 surface: login, tenant list/create, GitHub App install flow, stamp launcher + job progress, fleet table with operation buttons. The platform UI is deliberately NOT a template flavor: it owes nothing to template stack choices (thesis §3).\n",
     "title": "Governance UI: Vite + React Router v7 webapp"
   },
-  "shardHash": "7d69329867c0f78bb2f528b169098e1ea246ff68c9e7f03c1ea06d982979daf8",
+  "shardHash": "1ed72c25eb77d53d699de6f741eb4ce7045cdbe7fb13a4878547c0a8fdc6278d",
   "specVersion": "1.1.0"
 }

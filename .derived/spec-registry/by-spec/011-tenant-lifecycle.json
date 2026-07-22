@@ -22,7 +22,7 @@
       }
     ],
     "id": "011-tenant-lifecycle",
-    "implementation": "pending",
+    "implementation": "in-progress",
     "sectionHeadings": [
       "011: Tenant lifecycle and org-derived access",
       "1. Purpose",
@@ -40,13 +40,14 @@
       "5.8 Operator surfaces",
       "6. Operator prerequisites",
       "7. Acceptance",
-      "8. Out of scope"
+      "8. Out of scope",
+      "9. Status (2026-07-21): in-progress"
     ],
     "specPath": "specs/011-tenant-lifecycle/spec.md",
     "status": "approved",
     "summary": "Completes the tenant model that spec 004 opened: create gains delete, install gains uninstall, and ownership-by-creator grows into a two-tier authorization model. Tier one is the global statecraft_operator rauthy role (the platform operator: sees all tenants, can do everything); tier two is per-tenant membership derived from GitHub org roles (org admin -> tenant admin, org member -> tenant member), never from a rauthy role, so a customer who installs the App can never escalate to platform power. Self-serve onboarding turns on: rauthy auto_onboarding mints federated users from GitHub sign-in, an install with no pre-existing tenant auto-creates one bound to the chosen org, and login-time reconciliation grants a second org admin tenant access without an install. Provisioning verbs (stamp, fleet deploy/update/backup) gate on an active installation; teardown verbs (uninstall, fleet remove, tenant delete) never do. Destructive lifecycle acts run through the spec 008 action gate and land in the attestation ledger.\n",
     "title": "Tenant lifecycle and org-derived access"
   },
-  "shardHash": "f1342c94599fd1f417e1983de6fb3fe849bf3a7300fa6d05d1c84aad072f2984",
+  "shardHash": "1b3b0998a3716cc64e647e0b142a121a3e5f8cedd040f1611a35f6d7f01db65f",
   "specVersion": "1.1.0"
 }

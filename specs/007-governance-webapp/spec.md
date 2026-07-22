@@ -226,3 +226,17 @@ index check, lint, couple with the waiver) pass, and the chassis `verify` gates
 (root typecheck + vitest, the frontend typecheck + component tests, the SPA
 build into `backend/web/dist`, and the image build) are green. Flipped to
 `implementation: complete`.
+
+## Amendment (2026-07-21): spec 011 tenant lifecycle
+
+Spec 011 establishes a new nested-ownership route subtree it owns,
+`frontend/src/routes/operator/` (the operator console). Coordinated edits
+inside this spec's `frontend/` territory: `lib/api.ts` gains the operator,
+uninstall, delete-tenant, reconcile, and tenant-less install-url client
+methods plus the `isOperator` helper; `routes/root.tsx` adds an Operators
+nav entry gated on `me.roles` (the SPA's first consumer of roles);
+`routes/tenant-detail.tsx` adds uninstall and delete-tenant actions and
+disables Stamp when the tenant has no active installation;
+`routes/fleet.tsx` disables the deploy form under the same condition;
+`routes.tsx` wires the operator route and the tenant-detail action. See
+specs/011-tenant-lifecycle/spec.md §5.7, §5.8.

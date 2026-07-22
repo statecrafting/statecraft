@@ -22,6 +22,12 @@ export class UserAccount {
   @Column({ type: "json" }) roles: string[] = ["user"];
   @Column() ssoProvider = "";
   @Column({ nullable: true, index: true }) ssoProviderId: string | null = null;
+  // GitHub identity for a rauthy-federated user, resolved at login (spec 011
+  // §5.1). Nullable: non-federated accounts (bootstrap admin, mock driver) keep
+  // them null. CoreLedger schema init is CREATE-only, so an existing deployed
+  // DB needs a one-time manual ALTER (spec 011 §5.1; precedent: spec 005).
+  @Column({ nullable: true, index: true }) githubUserId: string | null = null;
+  @Column({ nullable: true }) githubLogin: string | null = null;
   @Column({ type: "json" }) attributes: Record<string, unknown> = {};
   @Column({ type: "boolean" }) isActive = true;
   @Column({ type: "timestamp", nullable: true }) lastLoginAt: Date | null = null;

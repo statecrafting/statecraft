@@ -10,7 +10,7 @@
  */
 import { ledger } from "../core/ledger";
 
-import { getOwnedTenant } from "../tenants/store";
+import { authorizeTenant, type Principal, type TenantAccess } from "../tenants/access/authz";
 
 import { type FleetAppStatus, FleetApp, FleetOp } from "./entities";
 import {
@@ -50,15 +50,20 @@ export async function listAppsForTenant(tenantId: string): Promise<FleetApp[]> {
   return apps().findWhere({ tenantId }, { orderBy: "createdAt", direction: "desc" });
 }
 
-/** The app, only if the caller owns its tenant (else null: existence is not leaked). */
-export async function getOwnedFleetApp(
+/**
+ * The app, only if the caller may act on its tenant at `level` (else null:
+ * existence is not leaked). Authorization is the shared spec 011 §3 rule, so
+ * operators and tenant members reach fleet verbs, not just the legacy owner.
+ */
+export async function getAccessibleFleetApp(
   appId: string,
-  ownerUserId: string,
+  principal: Principal,
+  level: TenantAccess,
 ): Promise<FleetApp | null> {
   await dbReady;
   const app = await apps().findById(appId);
   if (!app) return null;
-  const tenant = await getOwnedTenant(app.tenantId, ownerUserId);
+  const tenant = await authorizeTenant(app.tenantId, principal, level);
   if (!tenant) return null;
   return app;
 }

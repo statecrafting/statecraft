@@ -3,7 +3,7 @@ id: "011-tenant-lifecycle"
 title: "Tenant lifecycle and org-derived access"
 status: approved
 created: "2026-07-21"
-implementation: pending
+implementation: in-progress
 depends_on:
   - "001-statecraft-thesis"
   - "004-tenants-github-app"
@@ -336,3 +336,39 @@ never do:
   surfaces: spec 012 and the enrahitu 022/023 line.
 - Billing, quotas, tenant transfer between owners, and org rename
   reconciliation beyond what the webhook already conveys.
+
+## 9. Status (2026-07-21): in-progress
+
+The code for this spec has landed across its own territory
+(`backend/tenants/access/`, `backend/auth/github-identity.ts`,
+`frontend/src/routes/operator/`) and the coordinated edits in specs 002,
+004, 005, 006, 007, and 008 (each paired with a dated pointer amendment in
+the owning spec). Implemented: the two-tier authorization model behind the
+single `authorizeTenant` helper (operator role, org-derived membership,
+legacy owner), login-time GitHub-identity resolution and org-role
+reconciliation, uninstall and gated tenant delete, the tenant-less and
+direct-install self-serve entry paths, the linkage gate on provisioning
+verbs, and the operator console with its role-gated nav.
+
+Acceptance item 8 (the local gates) holds: `spec-spine compile && index &&
+lint --fail-on-warn && index check` and the chassis npm gates (backend and
+frontend typecheck + vitest) are green, with new unit tests for the authz
+rule, org-role derivation, and membership dedup/attach.
+
+Acceptance items 1-7 are live-behavior checks that require the deployed
+control plane (spec 009, in-progress) plus the operator prerequisites of
+§6, which are deploy-time acts, not code:
+
+- Run the documented one-time `ALTER TABLE user_account ADD COLUMN
+  github_user_id TEXT; ALTER TABLE user_account ADD COLUMN github_login
+  TEXT;` on the deployed database (CoreLedger schema init is CREATE-only;
+  §5.1, precedent spec 005). Fresh databases and the test suite get the
+  columns from the entity.
+- Create a rauthy API key (read-users scope) and bind it as
+  `RAUTHY_API_KEY` (the 33 -> 34 secret-catalog delta against spec 010).
+- Flip the GitHub upstream provider to `auto_onboarding: true` in rauthy
+  admin (leave `auto_link: false`).
+- Seed at least one `statecraft_operator` role holder in rauthy admin.
+
+This spec flips to `implementation: complete` once items 1-7 are exercised
+against the live cluster.

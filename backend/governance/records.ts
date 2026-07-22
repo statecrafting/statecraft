@@ -21,7 +21,9 @@ export type AttestationKind =
   | "update"
   | "backup"
   | "remove"
-  | "approval";
+  | "approval"
+  // Tenant lifecycle (spec 011 §5.5): deleting a tenant is a privileged act.
+  | "tenant_delete";
 
 interface RecordRequest {
   kind: AttestationKind;

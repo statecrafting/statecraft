@@ -1,24 +1,4 @@
 {
-  "diagnostics": {
-    "errors": [],
-    "warnings": [
-      {
-        "code": "W-001",
-        "message": "spec '011-tenant-lifecycle' directory unit 'backend/tenants/access/' is not a directory",
-        "path": "backend/tenants/access/"
-      },
-      {
-        "code": "W-001",
-        "message": "spec '011-tenant-lifecycle' file unit 'backend/auth/github-identity.ts' does not exist",
-        "path": "backend/auth/github-identity.ts"
-      },
-      {
-        "code": "W-001",
-        "message": "spec '011-tenant-lifecycle' directory unit 'frontend/src/routes/operator/' is not a directory",
-        "path": "frontend/src/routes/operator/"
-      }
-    ]
-  },
   "mapping": {
     "dependsOn": [
       "001-statecraft-thesis",
@@ -26,10 +6,27 @@
       "008-governance-attestation",
       "009-control-plane-deploy"
     ],
-    "implementingPaths": [],
+    "implementingPaths": [
+      {
+        "path": "backend/auth/github-identity.ts",
+        "source": "spec-edge"
+      },
+      {
+        "path": "backend/tenants/access/",
+        "source": "spec-edge"
+      },
+      {
+        "path": "frontend/src/routes/operator/",
+        "source": "spec-edge"
+      }
+    ],
     "resolvedUnits": [
       {
-        "locations": [],
+        "locations": [
+          {
+            "file": "backend/tenants/access/"
+          }
+        ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
@@ -38,7 +35,11 @@
         }
       },
       {
-        "locations": [],
+        "locations": [
+          {
+            "file": "frontend/src/routes/operator/"
+          }
+        ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
@@ -47,7 +48,11 @@
         }
       },
       {
-        "locations": [],
+        "locations": [
+          {
+            "file": "backend/auth/github-identity.ts"
+          }
+        ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
@@ -60,5 +65,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "8cdd63214c8d88f11af459c4429ae53b806cded161bb2cc0e07e8f0734bf7607"
+  "shardHash": "d7450c369a81a94bdb160922283d12009b67245a8aa887368312e48951f7939a"
 }

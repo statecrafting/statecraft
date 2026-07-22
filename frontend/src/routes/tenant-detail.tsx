@@ -1,7 +1,9 @@
-import { Link, useLoaderData } from "react-router";
-import type { LoaderFunctionArgs } from "react-router";
+import { useState } from "react";
+import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
 import {
+  ApiError,
   degradeOn404,
   factory,
   isDegraded,
@@ -47,10 +49,41 @@ export async function tenantDetailLoader({ params }: LoaderFunctionArgs): Promis
   return { tenant: detail.tenant, installations: detail.installations, installUrl: url, repos, stamps };
 }
 
+/** Lifecycle exits (spec 011 §5.4 uninstall, §5.5 delete). */
+export async function tenantDetailAction({ params, request }: ActionFunctionArgs) {
+  const id = params.id as string;
+  const form = await request.formData();
+  const intent = String(form.get("intent") ?? "");
+  try {
+    if (intent === "uninstall") {
+      await tenants.uninstall(id);
+      return { ok: "The GitHub App was uninstalled. Stamp and deploy are disabled until you reinstall." };
+    }
+    if (intent === "delete") {
+      const confirm = String(form.get("confirm") ?? "");
+      if (confirm !== String(form.get("name") ?? "")) {
+        return { error: "Type the tenant name exactly to confirm deletion." };
+      }
+      await tenants.remove(id, confirm);
+      return redirect("/");
+    }
+    return { error: "Unknown action." };
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message };
+    throw err;
+  }
+}
+
 export function TenantDetail() {
   const { tenant, installations, installUrl, repos, stamps } =
     useLoaderData() as TenantDetailData;
+  const actionData = useActionData() as { error?: string; ok?: string } | undefined;
+  const nav = useNavigation();
+  const busy = nav.state === "submitting";
   const hasActive = installations.some((i) => i.status === "active");
+
+  const [unlinking, setUnlinking] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
 
   return (
     <section>
@@ -60,14 +93,35 @@ export function TenantDetail() {
       <div className="page-head">
         <h1>{tenant.name}</h1>
         <div className="btn-row">
-          <Link className="btn btn-primary" to={`/tenants/${tenant.id}/stamps/new`}>
-            Stamp an app
-          </Link>
+          {hasActive ? (
+            <Link className="btn btn-primary" to={`/tenants/${tenant.id}/stamps/new`}>
+              Stamp an app
+            </Link>
+          ) : (
+            <button
+              className="btn btn-primary"
+              type="button"
+              disabled
+              title="Install the GitHub App into an org before stamping"
+            >
+              Stamp an app
+            </button>
+          )}
+          {/* Fleet stays reachable when unlinked so existing apps can be removed;
+              provisioning (deploy) is gated on the fleet page and server-side. */}
           <Link className="btn" to={`/tenants/${tenant.id}/fleet`}>
             Fleet
           </Link>
         </div>
       </div>
+
+      {actionData?.error && <div className="banner bad">{actionData.error}</div>}
+      {actionData?.ok && <div className="banner">{actionData.ok}</div>}
+      {!hasActive && (
+        <div className="notice">
+          No active GitHub App installation. Stamp and deploy are disabled until you install the App.
+        </div>
+      )}
 
       <div className="card">
         <dl className="kv">
@@ -126,6 +180,28 @@ export function TenantDetail() {
           <p className="hint">
             <a href={installUrl}>Install into another org</a>
           </p>
+          {hasActive && (
+            <div className="card">
+              {!unlinking ? (
+                <button className="btn btn-danger" type="button" onClick={() => setUnlinking(true)}>
+                  Unlink GitHub App
+                </button>
+              ) : (
+                <Form method="post" className="inline-form">
+                  <input type="hidden" name="intent" value="uninstall" />
+                  <span className="muted">
+                    Uninstall the App on GitHub? Reinstalling re-enables stamp and deploy.
+                  </span>
+                  <button className="btn btn-danger" type="submit" disabled={busy}>
+                    Confirm unlink
+                  </button>
+                  <button className="btn" type="button" onClick={() => setUnlinking(false)}>
+                    Cancel
+                  </button>
+                </Form>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -194,6 +270,34 @@ export function TenantDetail() {
           </div>
         </div>
       )}
+
+      <h2 className="section-title">Danger zone</h2>
+      <div className="card">
+        <p className="muted">
+          Deleting a tenant uninstalls the GitHub App, removes every membership, and cannot be
+          undone. Remove any fleet apps first.
+        </p>
+        <Form method="post" className="inline-form">
+          <input type="hidden" name="intent" value="delete" />
+          <input type="hidden" name="name" value={tenant.name} />
+          <input
+            name="confirm"
+            type="text"
+            placeholder={`type "${tenant.name}"`}
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            aria-label={`Type ${tenant.name} to confirm deletion`}
+            autoComplete="off"
+          />
+          <button
+            className="btn btn-danger"
+            type="submit"
+            disabled={busy || deleteConfirm !== tenant.name}
+          >
+            Delete tenant
+          </button>
+        </Form>
+      </div>
     </section>
   );
 }

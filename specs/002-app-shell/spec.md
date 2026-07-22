@@ -307,3 +307,13 @@ two-directory `backend/` + `frontend/` convention it describes is in fact what
 - Postgres (spec 003), any new service (004+), UI replacement (007).
 - Automating chassis refresh from upstream enrahitu (a later spec;
   manual re-import with a recorded commit is the v0 mode).
+
+## Amendment (2026-07-21): spec 011 tenant lifecycle
+
+Spec 011 makes coordinated edits inside this spec's `backend/auth/`
+territory: `entities.ts` gains two nullable GitHub-identity columns on
+`user_account` (`githubUserId`, `githubLogin`; resolved at login, null for
+non-federated accounts), and `rauthy.ts` calls a login hook that resolves
+that identity and reconciles org-derived tenant memberships. Spec 011 also
+establishes a new file inside this directory, `backend/auth/github-identity.ts`,
+which it owns. See specs/011-tenant-lifecycle/spec.md §5.1, §5.3.

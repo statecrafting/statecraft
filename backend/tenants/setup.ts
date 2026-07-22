@@ -14,6 +14,7 @@ import { api } from "encore.dev/api";
 import { logError, logInfo, logSecurityEvent } from "../lib/logger";
 import { withinAuthRateLimit } from "../lib/rate-limit";
 
+import { grantInstallMembership, tenantForInstall } from "./access/provision";
 import { githubWebhookSecret, webappBaseUrl } from "./config";
 import { getInstallation } from "./github-app";
 import { clientIp, endText, redirect, requestUrl } from "./http";
@@ -39,27 +40,28 @@ export const setup = api.raw(
       return;
     }
 
-    const tenant = await getOwnedTenant(binding.tenantId, binding.userId);
-    if (!tenant) {
-      logSecurityEvent("github.setup.tenant_mismatch");
-      endText(res, 404, "tenant not found");
-      return;
+    // Tenant-bound install (spec 004): verify the caller owns the target tenant
+    // before touching anything. Tenant-less install (spec 011 §5.6): no tenant
+    // yet, the signed userId is the authority, and one is created below.
+    if (binding.tenantId) {
+      const tenant = await getOwnedTenant(binding.tenantId, binding.userId);
+      if (!tenant) {
+        logSecurityEvent("github.setup.tenant_mismatch");
+        endText(res, 404, "tenant not found");
+        return;
+      }
     }
 
     try {
       const installation = await getInstallation(installationId);
       const githubOrg = installation.account?.login ?? "";
-      await upsertInstallation({
-        tenantId: binding.tenantId,
-        githubOrg,
-        installationId,
-        status: "active",
-      });
-      logInfo("tenants.installation_persisted", { tenantId: binding.tenantId, githubOrg });
-      redirect(
-        res,
-        `${webappBaseUrl()}/?github=installed&tenant=${encodeURIComponent(binding.tenantId)}`,
-      );
+      const tenantId = binding.tenantId
+        ? binding.tenantId
+        : await tenantForInstall(installationId, githubOrg, binding.userId);
+      await upsertInstallation({ tenantId, githubOrg, installationId, status: "active" });
+      await grantInstallMembership(tenantId, binding.userId);
+      logInfo("tenants.installation_persisted", { tenantId, githubOrg });
+      redirect(res, `${webappBaseUrl()}/?github=installed&tenant=${encodeURIComponent(tenantId)}`);
     } catch (err) {
       logError("tenants.setup_verify_failed", {
         tenantId: binding.tenantId,

@@ -8,7 +8,8 @@
 import { APIError, api } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 
-import { getOwnedTenant, listInstallationsForTenant } from "../tenants/store";
+import { authorizeTenant, principalFrom } from "../tenants/access/authz";
+import { listInstallationsForTenant } from "../tenants/store";
 
 import { isStampMode } from "./attest";
 import { isPosture } from "./cert";
@@ -80,7 +81,7 @@ export const createStamp = api(
   { expose: true, auth: true, method: "POST", path: "/api/v1/tenants/:id/stamps" },
   async ({ id, appName, targetOrg, frontend, posture, mode, pages }: CreateStampRequest): Promise<StampJobView> => {
     const auth = getAuthData()!;
-    const tenant = await getOwnedTenant(id, auth.userID);
+    const tenant = await authorizeTenant(id, principalFrom(auth), "write");
     if (!tenant) throw APIError.notFound("tenant not found");
 
     const name = (appName ?? "").trim();
@@ -132,7 +133,7 @@ export const getStamp = api(
     const auth = getAuthData()!;
     const job = await getJob(jobId);
     if (!job) throw APIError.notFound("stamp job not found");
-    const tenant = await getOwnedTenant(job.tenantId, auth.userID);
+    const tenant = await authorizeTenant(job.tenantId, principalFrom(auth), "read");
     if (!tenant) throw APIError.notFound("stamp job not found");
     return toView(job);
   },
@@ -147,7 +148,7 @@ export const listStamps = api(
   { expose: true, auth: true, method: "GET", path: "/api/v1/tenants/:id/stamps" },
   async ({ id }: { id: string }): Promise<ListStampsResponse> => {
     const auth = getAuthData()!;
-    const tenant = await getOwnedTenant(id, auth.userID);
+    const tenant = await authorizeTenant(id, principalFrom(auth), "read");
     if (!tenant) throw APIError.notFound("tenant not found");
     const rows = await listJobsForTenant(id);
     return { stamps: rows.map(toView) };

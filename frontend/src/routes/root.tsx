@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, Outlet, redirect, useLoaderData, useNavigate } from "react-router";
 
-import { ApiError, auth, type Me } from "../lib/api";
+import { ApiError, auth, isOperator, type Me } from "../lib/api";
 
 /**
  * Guards every route under "/": load the signed-in principal, and bounce
@@ -44,6 +44,7 @@ export function Root() {
           <NavLink to="/" end>
             Tenants
           </NavLink>
+          {isOperator(me) && <NavLink to="/operator/tenants">Operators</NavLink>}
         </nav>
         <div className="topnav-user">
           <span className="muted">{me.email}</span>

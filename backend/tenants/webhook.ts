@@ -12,6 +12,7 @@ import { api } from "encore.dev/api";
 
 import { logInfo, logSecurityEvent, logWarn } from "../lib/logger";
 
+import { autoProvisionFromInstall } from "./access/provision";
 import { githubWebhookSecret } from "./config";
 import type { InstallationStatus } from "./entities";
 import { endText, readRawBody } from "./http";
@@ -34,7 +35,8 @@ function statusForAction(action: string): InstallationStatus | null {
 
 interface InstallationEvent {
   action?: unknown;
-  installation?: { id?: unknown };
+  installation?: { id?: unknown; account?: { login?: unknown } };
+  sender?: { id?: unknown; login?: unknown };
 }
 
 export const webhook = api.raw(
@@ -79,6 +81,16 @@ export const webhook = api.raw(
     const updated = await setInstallationStatus(installationId, status);
     if (updated) {
       logInfo("tenants.installation_status_updated", { installationId, status, action });
+    } else if (action === "created") {
+      // Direct install from GitHub's App page (no app-side state): auto-create a
+      // tenant and a pending admin membership keyed by the installer (spec 011 §5.6).
+      const githubOrg =
+        typeof payload.installation?.account?.login === "string"
+          ? payload.installation.account.login
+          : "";
+      const senderGithubId = payload.sender?.id != null ? String(payload.sender.id) : "";
+      await autoProvisionFromInstall({ installationId, githubOrg, senderGithubId });
+      logInfo("tenants.installation_auto_provisioned", { installationId, githubOrg });
     } else {
       logWarn("tenants.installation_unknown", { installationId, action });
     }

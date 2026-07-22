@@ -7,6 +7,7 @@ import {
   degradeOn404,
   fleet,
   isDegraded,
+  tenants,
   type Degraded,
   type FleetAppView,
 } from "../lib/api";
@@ -15,6 +16,7 @@ import { formatDate, StatusBadge } from "../lib/ui";
 interface FleetData {
   tenantId: string;
   apps: FleetAppView[] | Degraded;
+  hasActiveInstallation: boolean;
 }
 
 export async function fleetLoader({ params }: LoaderFunctionArgs): Promise<FleetData> {
@@ -23,7 +25,16 @@ export async function fleetLoader({ params }: LoaderFunctionArgs): Promise<Fleet
     fleet.list(tenantId).then((r) => r.apps),
     "The fleet",
   );
-  return { tenantId, apps };
+  // Provisioning gates on an active installation (spec 011 §5.7). On any read
+  // failure default to enabled: the server enforces the gate regardless.
+  let hasActiveInstallation = true;
+  try {
+    const detail = await tenants.get(tenantId);
+    hasActiveInstallation = detail.installations.some((i) => i.status === "active");
+  } catch {
+    hasActiveInstallation = true;
+  }
+  return { tenantId, apps, hasActiveInstallation };
 }
 
 export async function fleetAction({ params, request }: ActionFunctionArgs) {
@@ -65,7 +76,7 @@ export async function fleetAction({ params, request }: ActionFunctionArgs) {
 }
 
 export function Fleet() {
-  const { tenantId, apps } = useLoaderData() as FleetData;
+  const { tenantId, apps, hasActiveInstallation } = useLoaderData() as FleetData;
   const actionData = useActionData() as { error?: string; ok?: boolean } | undefined;
 
   return (
@@ -134,37 +145,48 @@ export function Fleet() {
           )}
 
           <h2 className="section-title">Deploy an app</h2>
-          <DeployForm />
+          <DeployForm enabled={hasActiveInstallation} />
         </>
       )}
     </section>
   );
 }
 
-function DeployForm() {
+function DeployForm({ enabled }: { enabled: boolean }) {
   const nav = useNavigation();
   const busy = nav.state === "submitting";
   return (
     <Form method="post" className="card form">
       <input type="hidden" name="intent" value="deploy" />
+      {!enabled && (
+        <div className="notice">
+          Deploying is disabled until this tenant has an active GitHub App installation.
+        </div>
+      )}
       <label className="field">
         <span>App name</span>
-        <input name="name" type="text" placeholder="my-app" required />
+        <input name="name" type="text" placeholder="my-app" required disabled={!enabled} />
       </label>
       <label className="field">
         <span>Image ref</span>
-        <input name="image" type="text" placeholder="registry.example.com/my-app:sha-abc123" required />
+        <input
+          name="image"
+          type="text"
+          placeholder="registry.example.com/my-app:sha-abc123"
+          required
+          disabled={!enabled}
+        />
       </label>
       <label className="field">
         <span>Volume size (optional)</span>
-        <input name="volumeSize" type="text" placeholder="1Gi" />
+        <input name="volumeSize" type="text" placeholder="1Gi" disabled={!enabled} />
       </label>
       <label className="field">
         <span>Host (optional)</span>
-        <input name="host" type="text" placeholder="my-app.fleet.example.com" />
+        <input name="host" type="text" placeholder="my-app.fleet.example.com" disabled={!enabled} />
       </label>
       <div className="form-actions">
-        <button className="btn btn-primary" type="submit" disabled={busy}>
+        <button className="btn btn-primary" type="submit" disabled={busy || !enabled}>
           {busy ? "Placing..." : "Deploy"}
         </button>
       </div>
