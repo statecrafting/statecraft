@@ -1,14 +1,4 @@
 {
-  "diagnostics": {
-    "errors": [],
-    "warnings": [
-      {
-        "code": "W-001",
-        "message": "spec '012-frontend-admin-adoption' directory unit 'frontend-admin/' is not a directory",
-        "path": "frontend-admin/"
-      }
-    ]
-  },
   "mapping": {
     "dependsOn": [
       "001-statecraft-thesis",
@@ -16,15 +6,113 @@
       "009-control-plane-deploy",
       "011-tenant-lifecycle"
     ],
-    "implementingPaths": [],
+    "implementingPaths": [
+      {
+        "path": "app-manifest.json",
+        "source": "spec-edge"
+      },
+      {
+        "path": "app-model.json",
+        "source": "spec-edge"
+      },
+      {
+        "path": "backend/admin/",
+        "source": "spec-edge"
+      },
+      {
+        "path": "backend/obs/",
+        "source": "spec-edge"
+      },
+      {
+        "path": "frontend-admin",
+        "source": "manifest-metadata"
+      },
+      {
+        "path": "frontend-admin/",
+        "source": "spec-edge"
+      },
+      {
+        "path": "scripts/extract-model.mjs",
+        "source": "spec-edge"
+      }
+    ],
     "resolvedUnits": [
       {
-        "locations": [],
+        "locations": [
+          {
+            "file": "backend/admin/"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "directory",
+          "path": "backend/admin/"
+        }
+      },
+      {
+        "locations": [
+          {
+            "file": "backend/obs/"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "directory",
+          "path": "backend/obs/"
+        }
+      },
+      {
+        "locations": [
+          {
+            "file": "frontend-admin/"
+          }
+        ],
         "ownership": true,
         "sourceField": "establishes",
         "unit": {
           "kind": "directory",
           "path": "frontend-admin/"
+        }
+      },
+      {
+        "locations": [
+          {
+            "file": "app-manifest.json"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "file",
+          "path": "app-manifest.json"
+        }
+      },
+      {
+        "locations": [
+          {
+            "file": "app-model.json"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "file",
+          "path": "app-model.json"
+        }
+      },
+      {
+        "locations": [
+          {
+            "file": "scripts/extract-model.mjs"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "file",
+          "path": "scripts/extract-model.mjs"
         }
       }
     ],
@@ -32,5 +120,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "5aa00533cc629ec07dc28bf9071f6ac72de396cc8afe8c93efd1ed1fbb71557d"
+  "shardHash": "81838c9eb59fe05cad794b15632bae1e1846d5b45072c95270a21b6505e93864"
 }

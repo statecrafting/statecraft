@@ -22,11 +22,12 @@ standards_dir = "standards/spec"
 #
 # The app shell (spec 002) brings the root package.json (an Encore app,
 # spec-spine key -> 002); the SPA is the frontend/ package (spec 007,
-# spec-spine key -> 007), matching the enrahitu chassis backend/ + frontend/
-# convention. Pinned dependencies are not in-tree packages, so none are listed
-# here.
+# spec-spine key -> 007), and the operator dashboard is the frontend-admin/
+# package (spec 012, spec-spine key -> 012), matching the enrahitu chassis
+# backend/ + frontend/ + frontend-admin/ convention. Pinned dependencies are
+# not in-tree packages, so none are listed here.
 standalone_rust_workspaces = []
-standalone_npm_packages    = ["frontend"]
+standalone_npm_packages    = ["frontend", "frontend-admin"]
 
 [index]
 # Governance surfaces beyond the always-hashed core. Service manifests are
@@ -39,6 +40,7 @@ extra_hashed_inputs = [
   ".claude/skills/**",
   ".claude/settings.json",
   ".mcp.json",
+  "app-manifest.json",
 ]
 
 [coupling]

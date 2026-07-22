@@ -1139,5 +1139,19 @@ Live bring-up is operator work, proposed here rather than performed.
 - Multi-replica or HA control plane (section 4.2 explains why this is
   structural, not deferred tuning).
 - Re-homing the marketing site: the apex stays GitHub Pages.
-</content>
-</invoke>
+
+## Amendment (2026-07-22): spec 012 frontend-admin adoption, deploy env
+
+Spec 012 makes one coordinated edit in this spec's deploy manifest
+territory (`infra/gitops/.../statecraft/deployment.yaml`): the pod env
+gains `ADMIN_UI_ENABLED="true"`, the runtime kill switch for the
+operator dashboard (enrahitu spec 023 §3.1); flipping it to "false"
+serves 404 on `/admin` and `/api/admin/*` without a rebuild.
+`OTEL_EXPORTER_OTLP_ENDPOINT` is deliberately unset: no collector
+exists, and traces live in the in-app ring buffer the dashboard renders
+(enrahitu spec 022). The image (unchanged mechanics, §4.2) now carries
+`app-model.json`, the built `backend/web/dist-admin/` bundle, and
+serves `/metrics`; the pod scrape annotations and the ingress /metrics
+exclusion are spec 010's half of this adoption (its 2026-07-22
+amendment). The §7 exclusion of "`frontend-admin` itself" stands: the
+surface arrived with spec 012, not this spec.

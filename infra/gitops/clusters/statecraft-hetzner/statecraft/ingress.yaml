@@ -44,3 +44,35 @@ spec:
                 name: statecraft
                 port:
                   name: http
+---
+# /metrics stays off the public origin (spec 012; enrahitu spec 022 makes the
+# endpoint always-on and unauthenticated at the app layer, so the deployment
+# guidance is what keeps it private). A separate Ingress carries the Exact
+# /metrics location with an unsatisfiable allowlist: nginx merges rules per
+# host, the exact match beats the / prefix above, and every public request
+# gets 403 while the in-cluster Prometheus scrapes the pod directly
+# (deployment.yaml annotations), never through the ingress. A separate
+# resource because annotations apply per-Ingress, and the allowlist must not
+# touch the / paths.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: statecraft-metrics-deny
+  namespace: statecraft-system
+  labels:
+    statecraft.spec: "012-frontend-admin-adoption"
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "127.0.0.1/32"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: app.statecraft.ing
+      http:
+        paths:
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service:
+                name: statecraft
+                port:
+                  name: http

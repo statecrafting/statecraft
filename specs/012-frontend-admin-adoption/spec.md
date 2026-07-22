@@ -3,7 +3,7 @@ id: "012-frontend-admin-adoption"
 title: "frontend-admin adoption: the platform operator dashboard"
 status: approved
 created: "2026-07-21"
-implementation: pending
+implementation: in-progress
 depends_on:
   - "001-statecraft-thesis"
   - "002-app-shell"
@@ -11,6 +11,11 @@ depends_on:
   - "011-tenant-lifecycle"
 establishes:
   - { kind: directory, path: "frontend-admin/" }
+  - { kind: directory, path: "backend/admin/" }
+  - { kind: directory, path: "backend/obs/" }
+  - "app-manifest.json"
+  - "app-model.json"
+  - "scripts/extract-model.mjs"
 summary: >
   statecraft adopts the substrate's flag-gated admin dashboard
   (enrahitu specs 022/023: the observability contract and
@@ -114,6 +119,75 @@ hand-roll metrics endpoints here.
    `statecraft_operator`).
 5. Gates green: spec-spine compile/index/lint/index check plus the
    chassis npm gates.
+
+## 5.1 Implementation notes (2026-07-22)
+
+Taken against enrahitu commit `950a9be` (specs 022 + 023 complete on its
+main). Design points fixed at implementation time, recorded so the prose
+above reads precisely.
+
+**Territory, completed.** Acceptance 4 requires `app-model.json`, and §3
+never named its producer; the chassis pieces land inside spec 002's
+`backend/`. This spec therefore also establishes `backend/obs/` and
+`backend/admin/` (the two imported service directories, mirroring
+enrahitu 022/023's own establishes), plus the model plane:
+`app-manifest.json`, `app-model.json`, and `scripts/extract-model.mjs`.
+
+**The model plane is statecraft-produced, toolchain-observed.** The
+chassis's sanctioned producer (`enrahitu-extract`, toolchain 0.3.0)
+cannot run here: its verify step presumes the post-021 kernel chassis
+(governed facades under `backend/kernel/`, the bare-fetch ban, the hiq
+facade), and this backend pre-dates the kernel plane (eight direct
+`fetch` sites across idp/auth/tenants/factory, service-local secret
+bindings, direct `hiq/init` imports). Adopting the kernel is its own
+future front, not this spec. `scripts/extract-model.mjs` therefore
+drives the pinned toolchain's own extractor modules (meta decode,
+lowering, canonical hashing, and the real `otelObserved` import walk,
+so `observability.otel: true` is observed, never declared) and replaces
+the kernel-only verify with the statecraft-native checks: manifest
+service set equals the built app's, otel declaration equals the
+observation, every Encore secret binding declared. `gate.configHash` is
+sealed from the governance spine's real gate config via
+governance-native's `gateEvaluate` (it matches the addon's pinned
+`GATE_V1_CONFIG_HASH`), not the kernel's roster hash. CI runs
+`npm run check:model` after every build; `backend/lib/app-model.ts`
+re-verifies the canonical integrity hash fail-closed at module load, so
+a hand-edited model refuses to boot; `backend/lib/app-model.test.ts`
+pins the truth couplings (operator role = tenants' `OPERATOR_ROLE`,
+gate hash = the running gate's, service roster = the backend tree).
+The manifest declares `capabilities: []` throughout: the platform
+enforces no kernel capability ceilings yet, and the model must not
+claim governance that is not real.
+
+**Kernel seams, re-pointed at platform truth.** `kernel/boot`'s
+`modelJson`/`receipt` become `backend/lib/app-model.ts`; the Overview's
+ledger panel renders the spec 008 attestation chain
+(governance-native `ledgerVerify`: records, chain verification) instead
+of the kernel Decision ledger; the kernel denial observer is dropped
+(decision-id span correlation arrives with kernel adoption). Everything
+else is adopted verbatim from the chassis: `backend/obs/` (with the
+tracer anchor intact), `backend/admin/` (gate, gated static serving of
+`backend/web/dist-admin/`, SSE stream), `frontend-admin/` (neutral
+"Operator console" identity, renamed `@statecraft/frontend-admin`,
+spec-linked here), the jwt-verify split, `operatorRole()` reading the
+model, `ADMIN_UI_ENABLED`, and the mock operator principal.
+
+**The cross-repo fixture arm.** enrahitu 023 §4.1 left the pinned
+template fixture to this spec: `backend/factory/fixtures/`
+`template.v0_6_0.toml` (the real contract 0.6.0 with the `admin` slot)
+plus contract tests proving the spec 005 reader accepts 0.6.0 and
+stamps with the admin slot riding its default.
+
+**Verified locally (dev run, mock driver):** operator loads `/admin`
+(200) with Overview/Catalog/Traces rendering live platform data (12
+services, 57 endpoints, verified attestation chain); non-operator gets
+403 on the page and `permissionDenied` with
+`required: ["statecraft_operator"]` on every admin API; signed-out gets
+the login redirect; `/metrics` serves the request/duration/CoreLedger
+families and the counters move; the SSE stream opens; the kill switch
+404s both surfaces with `/metrics` unaffected. Acceptance 1-4's live
+(cluster) arms and 5's CI arm remain for the deploy; status flips to
+complete when they hold at app.statecraft.ing.
 
 ## 6. Out of scope
 
