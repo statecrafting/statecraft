@@ -1176,3 +1176,16 @@ serves `/metrics`; the pod scrape annotations and the ingress /metrics
 exclusion are spec 010's half of this adoption (its 2026-07-22
 amendment). The §7 exclusion of "`frontend-admin` itself" stands: the
 surface arrived with spec 012, not this spec.
+
+## Amendment (2026-07-22, second pin): the spec 011 walk-fix image
+
+The Deployment moves to digest `aeefe203` (tag `07a723f`, the PR #60
+merge). Three fixes ride it, all surfaced by spec 011's live acceptance
+walk: fleet remove forwards `subject_name`/`confirm_name` into the
+action gate (governance-native's `confirm-name-required` check denied
+every production remove without them), the SPA encodes DELETE payloads
+as query parameters (Encore's decode contract; tenant delete, fleet
+remove, and operator membership revoke were unusable from the UI), and
+the dashboard gains the spec 011 §5.6 tenant-less install entry. No
+schema or secret deltas; a pod delete after the Flux apply picks up the
+image.

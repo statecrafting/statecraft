@@ -58,7 +58,7 @@ spec:
           # 011 tenant-lifecycle code's first deploy (its user_account ALTER
           # was applied to the live database before this pin). The prior
           # digest (e4cc8b90, built from 4d0a392) is the Sec-Fetch proxy fix.
-          image: ghcr.io/statecrafting/statecraft@sha256:ce8edee50114b655859e8d5b8c9e37fc9c5934de1daa402b47a7a9bf6faa2bca
+          image: ghcr.io/statecrafting/statecraft@sha256:aeefe20382eb47fb85a9de077cb41f5ac0341e1fbdecba025381fa1c87c573d1
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
