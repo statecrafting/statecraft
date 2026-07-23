@@ -255,7 +255,7 @@ export const update = api(
       const ok = live.status === "running";
       await setAppStatus(app.id, ok ? "running" : "failed", { image: img, host: live.host || app.host });
       await finishOp(op.id, ok ? "succeeded" : "failed", live.message ?? null);
-      await record("update", app, auth.userID, { tenantId: app.tenantId, app: app.name, image: img }, gated.configHash);
+      await record("update", app, auth.userID, { tenantId: app.tenantId, app: app.name, image: img, port: app.port }, gated.configHash);
       logInfo("fleet.updated", { app: app.id, image: img, ok });
       return toView((await getApp(app.id))!);
     } catch (err) {

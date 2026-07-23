@@ -401,7 +401,12 @@ image change. The port travels in the deploy attestation payload and the
 CoreLedger schema init is CREATE-only, so the live database needs a manual
 `ALTER TABLE "fleet_app" ADD COLUMN "port" BIGINT NOT NULL DEFAULT 4000`
 before the image carrying this change deploys (precedent: the spec 011
-`user_account` ALTER, applied 2026-07-22).
+`user_account` ALTER, applied 2026-07-22). The backfill default cannot
+mislabel an existing 8080 placement, verified against the live database
+2026-07-23: `fleet_app` holds exactly one row, the 2026-07-22 walk's
+`probe` app, in the terminal `removed` state, and its placement died
+Forbidden before any cluster object was created (the pre-PR-#62 RBAC
+defect), so no row describes a deployment that live traffic depends on.
 
 The deploy side of the pull-secret story lands with it: spec 009 §4.4 has
 always listed `FLEET_IMAGE_PULL_SECRET` as deploy-set, but the Deployment
