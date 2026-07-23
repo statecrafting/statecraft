@@ -53,14 +53,14 @@ spec:
         - name: statecraft
           # Pinned by digest, never `:latest`. The tag is recorded alongside
           # for human legibility only; the digest is what is deployed.
-          # tag: dfe27c1 (012-frontend-admin-adoption merge, 2026-07-22) - the
-          # operator dashboard adoption (spec 012): backend/obs/ (/metrics +
-          # the trace plane), backend/admin/ + the frontend-admin bundle gated
-          # on statecraft_operator, app-model.json in the image, and the spec
-          # 011 tenant-lifecycle code's first deploy (its user_account ALTER
-          # was applied to the live database before this pin). The prior
-          # digest (e4cc8b90, built from 4d0a392) is the Sec-Fetch proxy fix.
-          image: ghcr.io/statecrafting/statecraft@sha256:aeefe20382eb47fb85a9de077cb41f5ac0341e1fbdecba025381fa1c87c573d1
+          # tag: 676b642 (006-fleet-port-pullsecret merge, 2026-07-23) - the
+          # fleet placement enablers (spec 006 amendment): the deploy-chosen
+          # container port (persisted on fleet_app; its BIGINT ALTER was
+          # applied to the live database before this pin) and the code that
+          # reads the FLEET_IMAGE_PULL_SECRET env set below. The prior
+          # digest (aeefe203, built from dfe27c1) is the spec 012 operator
+          # dashboard adoption.
+          image: ghcr.io/statecrafting/statecraft@sha256:f9fa57c924d8f579c982bf792bc8e9d5575f74e6a351c7a9ffa4288a4cfdeb4f
           imagePullPolicy: IfNotPresent
           # Fail-loud (spec 009 section 4.2, built 2026-07-23). Encore's
           # $env-bound secrets resolve absent-as-empty and are read lazily, so

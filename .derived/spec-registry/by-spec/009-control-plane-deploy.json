@@ -61,13 +61,14 @@
       "Amendment (2026-07-22): re-pin to the spec 012 image",
       "Amendment (2026-07-22): spec 012 frontend-admin adoption, deploy env",
       "Amendment (2026-07-22, second pin): the spec 011 walk-fix image",
-      "Amendment (2026-07-22): fleet placement RBAC"
+      "Amendment (2026-07-22): fleet placement RBAC",
+      "Amendment (2026-07-23, third pin): the fleet placement enablers"
     ],
     "specPath": "specs/009-control-plane-deploy/spec.md",
     "status": "approved",
     "summary": "Stand the control plane up on the spec 010 cluster as a platform-grade K8s deployment at app.statecraft.ing. Rewritten ground-up 2026-07-19 to the two-plane thesis (001 section 3), which unpauses it. The rewrite inverts the deploy's job: the published image is embedded-rauthy and self-seeds its own identity on first boot, so the shared-rauthy secret set is void, five of the eleven Encore secrets are discarded by the entrypoint if injected, and the /data volume becomes the identity anchor of the platform. What the deploy still owes the container: nine real secrets, the non-secret env, a Postgres URL, an ingress, and one seeder pass for the only thing first boot cannot seed (the upstream GitHub provider, which rauthy has no declarative bootstrap for). Operator surfaces gate on the custom statecraft_operator role, seeded here; rauthy_admin stays break-glass. Live bring-up is a human checkpoint.\n",
     "title": "The control-plane deploy: one governed container on the statecraft cluster"
   },
-  "shardHash": "5becd8699f22edf419ce219bc450f8db5626707821e7073ea8785a2af538c78d",
+  "shardHash": "4bcd52b92635c9f86e3d049aae829eae39ef21ba4a683e0395299707c0b89cf0",
   "specVersion": "1.1.0"
 }

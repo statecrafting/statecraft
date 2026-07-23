@@ -1271,3 +1271,15 @@ get/list/create; deployments, services, PVCs, jobs, ingresses,
 networkpolicies full lifecycle), and its ClusterRoleBinding; the
 Deployment's pod template adopts the ServiceAccount. A ClusterRole
 because tenant namespaces (`t-<tenantId>`) are dynamic.
+
+## Amendment (2026-07-23, third pin): the fleet placement enablers
+
+The Deployment moves to digest `f9fa57c9` (tag `676b642`, the PR #65
+merge). It carries the spec 006 amendment's deploy-chosen container port
+(persisted on `fleet_app`; the `BIGINT` ALTER was applied to the live
+database before this pin, so no ordering window existed) and the code
+that reads `FLEET_IMAGE_PULL_SECRET`, which the same PR added to this
+Deployment's env (section 4.4 note). One secret-shaped delta rides the
+manifest rather than the pod Secret: `FLEET_IMAGE_PULL_SECRET` is a
+resource name and travels as plain env. The digest change rolls the pod
+by itself (Recreate); no pod delete is needed.
