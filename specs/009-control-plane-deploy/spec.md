@@ -641,6 +641,17 @@ URL to select the Postgres driver. `ENRAHITU_LEDGER_POOL_SIZE` is optional.
 `FLEET_RESTIC_IMAGE`, `FACTORY_TEMPLATE_REPO`, `FACTORY_TEMPLATE_REF`,
 `FACTORY_DATA_DIR`, and `STATECRAFT_GOVERNANCE_STATE_DIR`.
 
+`FLEET_IMAGE_PULL_SECRET` was on this list from the start but the
+Deployment never set it, found 2026-07-23 while preparing the in-pod fleet
+E2E: `fleetImagePullSecret()` resolved empty in production, so placed pods
+carried no `imagePullSecrets` and private images could not be pulled at
+all. The Deployment now sets it to `ghcr-pull`. It is the NAME of the
+dockerconfigjson Secret fleet references on placed pods, not a credential
+(the spec 010 catalog carried the opposite claim and is corrected in the
+same change); the Secret itself is operator-provisioned in each tenant
+namespace, because fleet's RBAC (section 4.2 rbac.yaml) deliberately
+grants nothing on secrets.
+
 **`STATECRAFT_GOVERNANCE_CONFIG_DIR` was on that list and must not be, found
 live 2026-07-21.** Listing it beside `STATECRAFT_GOVERNANCE_STATE_DIR` treated
 two variables as a pair when they are opposites, and the Deployment followed

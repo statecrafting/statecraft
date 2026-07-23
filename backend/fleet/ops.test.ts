@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { FleetAppStatus } from "./entities";
 import {
+  FLEET_DEFAULT_PORT,
   canTransitionApp,
   canTransitionOp,
   type FleetOpStatus,
   isValidAppName,
+  isValidPort,
 } from "./ops";
 
 describe("fleet-op state machine", () => {
@@ -63,5 +65,23 @@ describe("app name validation (DNS-1123 label)", () => {
     for (const n of ["", "-lead", "trail-", "Upper", "under_score", "dot.dot", "sla/sh", "a".repeat(64)]) {
       expect(isValidAppName(n)).toBe(false);
     }
+  });
+});
+
+describe("container port validation", () => {
+  it("accepts the unprivileged range boundaries and the defaults in use", () => {
+    for (const p of [1024, FLEET_DEFAULT_PORT, 8080, 65535]) {
+      expect(isValidPort(p)).toBe(true);
+    }
+  });
+
+  it("rejects privileged, out-of-range, and non-integer ports", () => {
+    for (const p of [0, 1, 80, 443, 1023, 65536, -8080, 8080.5, Number.NaN, Infinity]) {
+      expect(isValidPort(p)).toBe(false);
+    }
+  });
+
+  it("treats float-typed integers as integers (JS number semantics)", () => {
+    expect(isValidPort(8080.0)).toBe(true);
   });
 });

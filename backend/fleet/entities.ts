@@ -31,6 +31,13 @@ export class FleetApp {
   @Column() image = "";
   /** PVC size in GiB (default 1). */
   @Column({ type: "integer" }) volumeSize = 1;
+  /**
+   * Container port the app serves; the addon keys PORT env, probes, Service,
+   * and Ingress off it. Persisted so update rebuilds the Deployment with the
+   * same port the deploy chose (enrahitu chassis images are fixed on 8080;
+   * the addon default is 4000).
+   */
+  @Column({ type: "integer" }) port = 4000;
   @Column() host = "";
   @Column({ index: true }) status: FleetAppStatus = "placing";
   @Column({ type: "timestamp" }) createdAt = new Date();

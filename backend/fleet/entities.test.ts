@@ -57,6 +57,7 @@ for (const arm of arms) {
         namespace: `t-${randomUUID()}`,
         image: "ghcr.io/acme/app:v1",
         volumeSize: 3,
+        port: 8080,
         host: "acme.deployd.xyz",
         status: "placing" as const,
       });
@@ -65,6 +66,7 @@ for (const arm of arms) {
       const back = await repo.findById(app.id);
       expect(back?.image).toBe("ghcr.io/acme/app:v1");
       expect(back?.volumeSize).toBe(3);
+      expect(back?.port).toBe(8080);
       expect(back?.status).toBe("placing");
       expect(back?.stampJobId).toBeNull();
 

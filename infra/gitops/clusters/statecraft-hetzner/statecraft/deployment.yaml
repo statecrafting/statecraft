@@ -181,6 +181,15 @@ spec:
               value: "https://nbg1.your-objectstorage.com"
             - name: FLEET_RESTIC_IMAGE
               value: "restic/restic:0.17.3"
+            # The NAME of the dockerconfigjson Secret fleet references as
+            # imagePullSecrets on placed pods; a resource name, not a
+            # credential, hence plain env and not the Secret. The Secret
+            # itself must be operator-provisioned in each tenant namespace:
+            # fleet's RBAC (rbac.yaml) deliberately grants nothing on
+            # secrets, so fleet can reference but never create it. Empty
+            # would mean public images only.
+            - name: FLEET_IMAGE_PULL_SECRET
+              value: "ghcr-pull"
             - name: FACTORY_TEMPLATE_REPO
               value: "statecrafting/enrahitu"
             - name: FACTORY_TEMPLATE_REF

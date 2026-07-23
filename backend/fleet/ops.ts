@@ -60,3 +60,16 @@ export class InvalidAppTransitionError extends Error {
 export function isValidAppName(name: string): boolean {
   return name.length <= 63 && /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(name);
 }
+
+/** The addon's default container port, applied when deploy names none. */
+export const FLEET_DEFAULT_PORT = 4000;
+
+/**
+ * The deploy-chosen container port. Privileged ports are rejected up front:
+ * placed pods run as a non-root UID with no NET_BIND_SERVICE, so a port
+ * below 1024 cannot be bound and would hang the rollout wait on a probe
+ * aimed at a port nothing can listen on.
+ */
+export function isValidPort(port: number): boolean {
+  return Number.isInteger(port) && port >= 1024 && port <= 65535;
+}
