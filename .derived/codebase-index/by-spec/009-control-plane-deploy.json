@@ -11,6 +11,14 @@
         "source": "spec-edge"
       },
       {
+        "path": ".github/workflows/ai-changelog.yml",
+        "source": "spec-edge"
+      },
+      {
+        "path": ".github/workflows/ai-pr-review.yml",
+        "source": "spec-edge"
+      },
+      {
         "path": ".github/workflows/image.yml",
         "source": "spec-edge"
       },
@@ -53,6 +61,32 @@
       {
         "locations": [
           {
+            "file": ".github/workflows/ai-changelog.yml"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "file",
+          "path": ".github/workflows/ai-changelog.yml"
+        }
+      },
+      {
+        "locations": [
+          {
+            "file": ".github/workflows/ai-pr-review.yml"
+          }
+        ],
+        "ownership": true,
+        "sourceField": "establishes",
+        "unit": {
+          "kind": "file",
+          "path": ".github/workflows/ai-pr-review.yml"
+        }
+      },
+      {
+        "locations": [
+          {
             "file": ".github/workflows/image.yml"
           }
         ],
@@ -81,5 +115,5 @@
     "specStatus": "approved"
   },
   "schemaVersion": "1.1.0",
-  "shardHash": "9f08848f8af9ba1192073dcade468bd17a7656248f99187456bace4455d92411"
+  "shardHash": "646e62752696f166a17b957297f0736b95ab1eb681ca293e09622525748fc508"
 }

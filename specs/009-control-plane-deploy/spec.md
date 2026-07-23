@@ -10,6 +10,8 @@ depends_on:
   - "010-statecraft-cluster"
 establishes:
   - ".github/workflows/image.yml"
+  - ".github/workflows/ai-pr-review.yml"
+  - ".github/workflows/ai-changelog.yml"
   - ".dockerignore"
   - { kind: directory, path: "infra/gitops/clusters/statecraft-hetzner/statecraft/" }
   - "infra/gitops/clusters/statecraft-hetzner/statecraft-kustomization.yaml"
@@ -17,9 +19,9 @@ establishes:
 # spec 010's `infra/` on the nested-ownership pattern this corpus already uses
 # (spec 002 owns backend/ while 004, 005, 006, and 008 own subdirectories
 # inside it), which is what let the relocation off a top-level `deploy/`
-# happen without a second location for Kubernetes YAML (section 3).
-# Still to land with their units: .github/workflows/{cd,ai-pr-review,
-# ai-changelog}.yml.
+# happen without a second location for Kubernetes YAML (section 3). The AI
+# review and changelog workflows landed 2026-07-23 (section 4.9). Still to
+# land with its unit: .github/workflows/cd.yml.
 summary: >
   Stand the control plane up on the spec 010 cluster as a platform-grade K8s
   deployment at app.statecraft.ing. Rewritten ground-up 2026-07-19 to the
@@ -370,7 +372,8 @@ successor task. Platform observability is the in-substrate flag-gated
 - `.github/workflows/cd.yml`: on push to `main` (sha-pinned) and on
   `workflow_dispatch`; never floats `latest` onto the running release.
 - `.github/workflows/ai-pr-review.yml` and `ai-changelog.yml`: ported from OAP
-  spec 085, stripped of OAP paths and secrets.
+  spec 085, stripped of OAP paths and secrets. **Landed 2026-07-23; see
+  section 4.9 for what the port kept and dropped.**
 
 **Cross-spec touches**, each requiring a coordinated edit or a cited waiver:
 `infra.config.json` (spec 002) needs a production origin and a metrics block
@@ -503,6 +506,23 @@ non-empty (the shape `scripts/verify-born-with.mjs` already uses for other
 born-with material), which fails closed regardless of Encore's `$env` behavior.
 That is a chassis-or-app change with an owner to assign, not a manifest edit, so
 it is named and left for a spec that owns the startup path.
+
+**Built 2026-07-23, and the "not a manifest edit" premise above was wrong.**
+The paragraph assumed the assertion had to live where Encore resolves secrets,
+inside the app or the chassis. It does not: every key the deploy owes is an
+ordinary environment variable at container start (the `envFrom` Secret of
+section 4.4), so the Deployment's `command` can wrap the image entrypoint and
+assert all ten non-empty (the nine of section 2.2 plus `RAUTHY_API_KEY`, which
+joined via the spec 011/012 catalog amendment) before `/enrahitu/entrypoint.sh`
+ever runs. A missing or empty key now exits 1 with a `[required-env]` line
+naming every absent variable at once, which the die-together restart policy
+turns into the crash loop the acceptance always wanted. This is a
+manifest-only change in this spec's own territory: no image rebuild, no
+chassis divergence, survives re-pins. The chassis-generic version (a
+`ENRAHITU_REQUIRED_ENV`-driven assertion inside the entrypoint itself) remains
+the better long-term home and is handed to the enrahitu spine as a
+substrate-rewrite item; when it lands, this wrapper reduces to setting that
+variable.
 
 ### 4.3 The volume is the identity anchor
 
@@ -932,6 +952,24 @@ is already covered by this repo's `spec-spine.yml` (coupling) and `verify.yml`
 (typecheck/test); port only the missing orchestration if a single required
 check is wanted, not OAP's service-specific fan-out.
 
+**Landed 2026-07-23.** What the port kept from OAP: the stdin-fed diff (no
+shell evaluation of contributor-controlled content), the pinned CLI version,
+the draft-PR skip, the `DIFF_SIZE_CAP` guard with a visible skip comment, the
+API-failure classification (auth errors fail the job; outages pass loudly with
+a posted notice so a third-party incident never blocks merges silently), and
+the retrying comment post. What it dropped: OAP's `workflow_call` dispatch
+(this repo has no ci.yml orchestrator, so the trigger is plain `pull_request`;
+a dispatch trigger would carry no PR context and was not kept) and the entire
+Local-Review-Evidence verifier mode,
+because this repo's `/ship` posts no such evidence comment and dead trust
+plumbing reads as configured. The review prompt is retargeted at this corpus:
+bugs, security, and spec-spine coupling (specs as design truth) rather than
+OAP's `Feature:` annotations. Auth is `CLAUDE_CODE_OAUTH_TOKEN`, a repository
+secret the operator must set; the job fails with a distinct error when it is
+absent, never a silent green. `ai-changelog.yml` keeps its release-published
+trigger and appends the generated changelog to the release body; it is inert
+until this repo cuts releases, which `image.yml` already anticipates.
+
 ## 5. Acceptance
 
 - `image.yml` publishes a pullable `ghcr.io/statecrafting/statecraft`,
@@ -954,6 +992,13 @@ check is wanted, not OAP's service-specific fan-out.
   startup assertion (section 4.2's recommendation). Two of this criterion's
   own words are also wrong: resolution is lazy, so a missing secret fails at
   first use of the owning endpoint, not as a boot crash-loop.
+  **Mechanism landed 2026-07-23:** the Deployment `command` wrapper of
+  section 4.2 asserts all ten required keys non-empty before the entrypoint
+  runs, so a removed key now fails the container at start, loudly and by
+  name. The deliberate live re-test (remove one key, watch the crash loop,
+  restore it) is still owed once, after Flux reconciles the wrapper; until
+  that run this item stays open by its own "verified once, deliberately"
+  wording.
 - `https://app.statecraft.ing` serves the governance UI over a real cert (not
   the ingress default certificate).
 - OIDC discovery at `https://app.statecraft.ing/auth/v1/.well-known/openid-configuration`
@@ -969,7 +1014,10 @@ check is wanted, not OAP's service-specific fan-out.
 - The volume backup of section 4.3 rule 2 exists and a restore has been
   rehearsed at least once.
 - `ai-pr-review.yml` runs on a PR and posts a review; spine gates and verify
-  green.
+  green. **Workflow landed 2026-07-23 (section 4.9); the claim needs its
+  first real posted review, which is gated on the operator setting the
+  `CLAUDE_CODE_OAUTH_TOKEN` repository secret. The PR that carries the
+  workflow exercises it the moment the secret exists.**
 
 Retiring the OAP release is not this spec's acceptance: the old cluster was
 deleted wholesale by spec 010 on 2026-07-17, taking the release and its
@@ -1009,7 +1057,9 @@ initialized rauthy hiqlite database all exist under `/data`.
   recommendation and left to the spec that owns the startup path. This is a
   genuine open gap, not a formality: a forgotten or misspelled secret degrades
   this platform silently today.
-- **`ai-pr-review.yml` does not exist**, so that line cannot be claimed.
+- ~~**`ai-pr-review.yml` does not exist**, so that line cannot be claimed.~~
+  **Landed 2026-07-23** (section 4.9); the first posted review is gated on
+  the operator-set `CLAUDE_CODE_OAUTH_TOKEN` secret.
 
 **Closed after the initial bring-up, 2026-07-21:**
 
