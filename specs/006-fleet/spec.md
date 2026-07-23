@@ -379,3 +379,35 @@ echoes `subject_name` (the app name) and `confirm_name` (the caller's
 typed confirm) in the remove gate attributes. The endpoint-level
 name-confirm guard is unchanged; the gate now sees the same evidence it
 demands. See specs/011-tenant-lifecycle/spec.md §9.
+
+## Amendment (2026-07-23): deploy-chosen container port
+
+The addon's `DeploySpec.port` (default 4000) was never reachable from the
+HTTP API: `DeployRequest` had no `port` field, so every placement keyed the
+container `PORT` env, the probes, the Service, and the Ingress backend off
+4000. That default fits nothing this platform actually places: enrahitu
+chassis images serve 8080, fixed in the image (`EXPOSE 8080`, an entrypoint
+that never honors `$PORT`), so placing one would create every object and
+then hang at the rollout wait on a probe aimed at a port nothing listens
+on, a permanent failure indistinguishable from a slow start.
+
+`api.ts` now accepts an optional `port` on deploy (integer 1-65535,
+default 4000 unchanged), persists it on `FleetApp`, and forwards the
+persisted value on `update`, which rebuilds the Deployment spec and would
+otherwise silently revert a port-8080 app's probes to 4000 on its first
+image change. The port travels in the deploy attestation payload and the
+`FleetAppView`.
+
+CoreLedger schema init is CREATE-only, so the live database needs a manual
+`ALTER TABLE "fleet_app" ADD COLUMN "port" BIGINT NOT NULL DEFAULT 4000`
+before the image carrying this change deploys (precedent: the spec 011
+`user_account` ALTER, applied 2026-07-22).
+
+The deploy side of the pull-secret story lands with it: spec 009 §4.4 has
+always listed `FLEET_IMAGE_PULL_SECRET` as deploy-set, but the Deployment
+never set it, so `fleetImagePullSecret()` resolved empty in production and
+placed pods carried no `imagePullSecrets` at all. The Deployment now sets
+it to `ghcr-pull` (see the spec 009 §4.4 note and the spec 010 catalog
+correction; the semantics here are unchanged from §3 finding #2: a
+pre-provisioned Secret NAME, operator-created per tenant namespace,
+because fleet's RBAC deliberately grants nothing on secrets).

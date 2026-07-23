@@ -38,6 +38,7 @@ export interface FleetAppView {
   namespace: string;
   image: string;
   volumeSize: number;
+  port: number;
   host: string;
   status: string;
   createdAt: string;
@@ -53,6 +54,7 @@ function toView(a: FleetApp): FleetAppView {
     namespace: a.namespace,
     image: a.image,
     volumeSize: a.volumeSize,
+    port: a.port,
     host: a.host,
     status: a.status,
     createdAt: a.createdAt.toISOString(),
@@ -99,7 +101,22 @@ interface DeployRequest {
   name: string;
   image: string;
   volumeSize?: number;
+  /**
+   * Container port the image serves (default 4000, the addon's default).
+   * enrahitu chassis images are fixed on 8080, so placing one requires
+   * passing it here; the probes, Service, and Ingress all key off it.
+   */
+  port?: number;
   stampJobId?: string;
+}
+
+/** The deploy-chosen container port, validated; undefined defaults to 4000. */
+function validatePort(port: number | undefined): number {
+  if (port === undefined) return 4000;
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw APIError.invalidArgument("port must be an integer between 1 and 65535");
+  }
+  return port;
 }
 
 /**
@@ -109,7 +126,7 @@ interface DeployRequest {
  */
 export const deploy = api(
   { expose: true, auth: true, method: "POST", path: "/api/v1/tenants/:id/fleet" },
-  async ({ id, name, image, volumeSize, stampJobId }: DeployRequest): Promise<FleetAppView> => {
+  async ({ id, name, image, volumeSize, port, stampJobId }: DeployRequest): Promise<FleetAppView> => {
     const auth = getAuthData()!;
     const tenant = await authorizeTenant(id, principalFrom(auth), "write");
     if (!tenant) throw APIError.notFound("tenant not found");
@@ -128,6 +145,7 @@ export const deploy = api(
     const namespace = namespaceFor(id);
     const host = `${appName}.${domain}`;
     const size = volumeSize && volumeSize > 0 ? volumeSize : 1;
+    const appPort = validatePort(port);
     const pullSecret = fleetImagePullSecret();
 
     const gated = await gateOrDeny("deploy", { tenantId: id, app: appName, image: img }, "soft");
@@ -138,6 +156,7 @@ export const deploy = api(
       namespace,
       image: img,
       volumeSize: size,
+      port: appPort,
       host,
     });
     const op = await startOp(app.id, "deploy");
@@ -149,6 +168,7 @@ export const deploy = api(
         image: img,
         host,
         volumeSizeGi: size,
+        port: appPort,
         ...(pullSecret ? { imagePullSecret: pullSecret } : {}),
       });
       const ok = status.status === "running";
@@ -157,7 +177,7 @@ export const deploy = api(
         host: status.host || host,
       });
       await finishOp(op.id, ok ? "succeeded" : "failed", status.message ?? null);
-      await record("deploy", app, auth.userID, { tenantId: id, app: appName, namespace, image: img, host }, gated.configHash);
+      await record("deploy", app, auth.userID, { tenantId: id, app: appName, namespace, image: img, host, port: appPort }, gated.configHash);
       logInfo("fleet.deployed", { app: app.id, namespace, host, ok });
       return toView((await getApp(app.id))!);
     } catch (err) {
@@ -226,6 +246,10 @@ export const update = api(
         image: img,
         host: app.host,
         volumeSizeGi: app.volumeSize,
+        // The deploy-chosen port, persisted on the row: update rebuilds the
+        // Deployment spec, and omitting it would revert probes to the addon
+        // default (4000) on every image change.
+        port: app.port,
         ...(pullSecret ? { imagePullSecret: pullSecret } : {}),
       });
       const ok = live.status === "running";

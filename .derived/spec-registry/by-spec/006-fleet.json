@@ -25,13 +25,14 @@
       "5. Out of scope",
       "2026-07-20: the addon transferred out; this spec narrowed, not retired",
       "Amendment (2026-07-21): spec 011 tenant lifecycle",
-      "Amendment (2026-07-22): remove-gate confirmation attributes"
+      "Amendment (2026-07-22): remove-gate confirmation attributes",
+      "Amendment (2026-07-23): deploy-chosen container port"
     ],
     "specPath": "specs/006-fleet/spec.md",
     "status": "approved",
     "summary": "Milestone M3: operate stamped apps. The unit of placement is \"one EnRaHiTu container + one volume + one ingress\" on the existing hetzner-k3s cluster. deployd-api-rs (the OAP-era Rust K8s orchestrator, axum + hiqlite) donates its orchestration core as a napi-rs addon (the hiqlite-native pattern): the axum HTTP layer disappears, the K8s knowledge stays. A fleet/ Encore service exposes deploy / status / update / backup over the addon. Done-when is a fleet of ten stamped apps on one box with update and backup exercised.\n",
     "title": "Fleet: deployd's core as an in-process addon, placing EnRaHiTu apps"
   },
-  "shardHash": "2519cf1793b565a51af9968b30333967442bc1e027055e6a5fa352659724fad7",
+  "shardHash": "a0e380d23bd9306f76677c699c7ebf25386beae6ffc0e5d1501ecacd739d1fa3",
   "specVersion": "1.1.0"
 }

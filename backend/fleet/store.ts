@@ -75,6 +75,7 @@ export interface CreateAppInput {
   namespace: string;
   image: string;
   volumeSize: number;
+  port: number;
   host: string;
 }
 
@@ -88,6 +89,7 @@ export async function createApp(input: CreateAppInput): Promise<FleetApp> {
     namespace: input.namespace,
     image: input.image,
     volumeSize: input.volumeSize,
+    port: input.port,
     host: input.host,
     status: "placing" as FleetAppStatus,
     createdAt: now,

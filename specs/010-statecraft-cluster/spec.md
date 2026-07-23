@@ -634,3 +634,17 @@ observability is the in-substrate flag-gated frontend-admin"):
   `/admin` and `/api/admin/*` stay routed (they are gated in-app,
   server-side). A separate resource because the allowlist annotation
   applies per-Ingress and must not touch the `/` paths.
+
+## Amendment (2026-07-23): FLEET_IMAGE_PULL_SECRET is a name, not a credential
+
+The catalog entry for `FLEET_IMAGE_PULL_SECRET` claimed a base64
+dockerconfigjson derived from `GHCR_PAT`, inherited from the OAP-era
+design. No code ever read it that way: `fleet/config.ts` has always
+consumed it as the NAME of a pre-provisioned `dockerconfigjson` Secret to
+reference as `imagePullSecrets` on placed pods (spec 006 §3 finding #2),
+and fleet's RBAC deliberately cannot create Secrets. The entry is
+corrected to `user-supplied`, non-secret, still required (`ghcr-pull` in
+production, matching the spec 009 deploy env), the `derived` provenance
+class is left with no members, and `.env.example` is regenerated;
+`secrets:validate` and `secrets:check` stay green. The operator `.env`
+value predates the correction and should be updated to the Secret name.
