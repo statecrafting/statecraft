@@ -105,6 +105,8 @@ interface DeployRequest {
    * Container port the image serves (default 4000, the addon's default).
    * enrahitu chassis images are fixed on 8080, so placing one requires
    * passing it here; the probes, Service, and Ingress all key off it.
+   * Immutable after deploy: update forwards the persisted value, so
+   * changing it means remove + redeploy.
    */
   port?: number;
   stampJobId?: string;
