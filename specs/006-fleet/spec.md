@@ -391,8 +391,11 @@ that never honors `$PORT`), so placing one would create every object and
 then hang at the rollout wait on a probe aimed at a port nothing listens
 on, a permanent failure indistinguishable from a slow start.
 
-`api.ts` now accepts an optional `port` on deploy (integer 1-65535,
-default 4000 unchanged), persists it on `FleetApp`, and forwards the
+`api.ts` now accepts an optional `port` on deploy (integer 1024-65535:
+privileged ports are rejected up front because placed pods run as a
+non-root UID with no NET_BIND_SERVICE, so a port below 1024 could only
+reproduce the same permanent rollout hang; default 4000 unchanged),
+persists it on `FleetApp`, and forwards the
 persisted value on `update`, which rebuilds the Deployment spec and would
 otherwise silently revert a port-8080 app's probes to 4000 on its first
 image change. The port travels in the deploy attestation payload and the
@@ -401,7 +404,8 @@ image change. The port travels in the deploy attestation payload and the
 CoreLedger schema init is CREATE-only, so the live database needs a manual
 `ALTER TABLE "fleet_app" ADD COLUMN "port" BIGINT NOT NULL DEFAULT 4000`
 before the image carrying this change deploys (precedent: the spec 011
-`user_account` ALTER, applied 2026-07-22). The backfill default cannot
+`user_account` ALTER, applied 2026-07-22). Applied to the live database
+2026-07-23, ahead of the merge, so no deploy ordering window exists. The backfill default cannot
 mislabel an existing 8080 placement, verified against the live database
 2026-07-23: `fleet_app` holds exactly one row, the 2026-07-22 walk's
 `probe` app, in the terminal `removed` state, and its placement died

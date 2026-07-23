@@ -17,7 +17,7 @@ import { backupTarget, fleetBaseDomain, fleetImagePullSecret } from "./config";
 import type { FleetApp, FleetAppStatus } from "./entities";
 import { gateOrDeny } from "./gate";
 import * as native from "./native";
-import { isValidAppName } from "./ops";
+import { FLEET_DEFAULT_PORT, isValidAppName, isValidPort } from "./ops";
 import {
   createApp,
   finishOp,
@@ -102,23 +102,15 @@ interface DeployRequest {
   image: string;
   volumeSize?: number;
   /**
-   * Container port the image serves (default 4000, the addon's default).
-   * enrahitu chassis images are fixed on 8080, so placing one requires
-   * passing it here; the probes, Service, and Ingress all key off it.
-   * Immutable after deploy: update forwards the persisted value, so
+   * Container port the image serves (default 4000, the addon's default;
+   * integer 1024-65535, privileged ports rejected because placed pods run
+   * non-root). enrahitu chassis images are fixed on 8080, so placing one
+   * requires passing it here; the probes, Service, and Ingress all key off
+   * it. Immutable after deploy: update forwards the persisted value, so
    * changing it means remove + redeploy.
    */
   port?: number;
   stampJobId?: string;
-}
-
-/** The deploy-chosen container port, validated; undefined defaults to 4000. */
-function validatePort(port: number | undefined): number {
-  if (port === undefined) return 4000;
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw APIError.invalidArgument("port must be an integer between 1 and 65535");
-  }
-  return port;
 }
 
 /**
@@ -147,7 +139,12 @@ export const deploy = api(
     const namespace = namespaceFor(id);
     const host = `${appName}.${domain}`;
     const size = volumeSize && volumeSize > 0 ? volumeSize : 1;
-    const appPort = validatePort(port);
+    const appPort = port ?? FLEET_DEFAULT_PORT;
+    if (!isValidPort(appPort)) {
+      throw APIError.invalidArgument(
+        "port must be an integer between 1024 and 65535 (placed pods run non-root and cannot bind privileged ports)",
+      );
+    }
     const pullSecret = fleetImagePullSecret();
 
     const gated = await gateOrDeny("deploy", { tenantId: id, app: appName, image: img }, "soft");
