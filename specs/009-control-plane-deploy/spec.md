@@ -970,6 +970,13 @@ absent, never a silent green. `ai-changelog.yml` keeps its release-published
 trigger and appends the generated changelog to the release body; it is inert
 until this repo cuts releases, which `image.yml` already anticipates.
 
+Threat model: stdin delivery prevents shell evaluation of
+contributor-controlled content, but LLM-level prompt injection through a
+crafted diff or commit message remains possible and is accepted. The blast
+radius is a PR comment or a release body, both human-read surfaces with no
+privileged side effects; neither workflow grants the model tools or write
+access beyond the posted text.
+
 ## 5. Acceptance
 
 - `image.yml` publishes a pullable `ghcr.io/statecrafting/statecraft`,

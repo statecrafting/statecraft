@@ -122,7 +122,11 @@ jobs:
             {
               echo "review_status=api_failure"
               echo "api_rc=${rc}"
-              echo "api_excerpt=${excerpt}"
+              # Heredoc form: the tr above already strips newlines, but the
+              # delimiter format is robust to any value, not just sanitized ones.
+              echo "api_excerpt<<EXCERPT_EOF"
+              printf '%s\n' "$excerpt"
+              echo "EXCERPT_EOF"
             } >> "$GITHUB_OUTPUT"
             echo "::warning::AI review could not run due to a Claude API failure (rc=${rc}): ${excerpt}. Passing so the API incident does not block merges; re-run once the API recovers."
           fi

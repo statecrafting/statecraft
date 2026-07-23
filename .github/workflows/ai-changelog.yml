@@ -64,6 +64,11 @@ jobs:
       # Prelude in -p; commit list on stdin.
       - name: Generate changelog
         env:
+          # Subscription-backed auth via the Claude Code OAuth token, NOT an
+          # API key. ANTHROPIC_API_KEY is deliberately NOT set here (mirror of
+          # ai-pr-review.yml): an empty/unset API key wins by precedence over
+          # the OAuth token, a silent auth failure whose placeholder body
+          # would mask the misconfiguration.
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           set -o pipefail
