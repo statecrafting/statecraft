@@ -1283,3 +1283,15 @@ Deployment's env (section 4.4 note). One secret-shaped delta rides the
 manifest rather than the pod Secret: `FLEET_IMAGE_PULL_SECRET` is a
 resource name and travels as plain env. The digest change rolls the pod
 by itself (Recreate); no pod delete is needed.
+
+## Amendment (2026-07-23, fourth pin): fleet-native 0.2.0
+
+The Deployment moves to digest `43717a27` (tag `5cbbded`, the PR #67
+merge). It carries exactly one change: the `@statecrafting/fleet-native`
+pin at 0.2.0, whose per-app ingress-allow NetworkPolicy ends the
+namespace-wide port pin the 2026-07-23 in-pod two-stage E2E surfaced
+(spec 006 amendment, statecrafting spec 006 amendment). No schema delta,
+no new secret, and no env change rides this pin; the digest change rolls
+the pod by itself (Recreate). Post-roll the operator deletes the stale
+hand-patched `fleet-allow-ingress-nginx` from the test tenant namespace,
+per the spec 006 amendment's migration note.

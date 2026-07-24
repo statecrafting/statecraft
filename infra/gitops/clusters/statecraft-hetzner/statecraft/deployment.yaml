@@ -53,14 +53,12 @@ spec:
         - name: statecraft
           # Pinned by digest, never `:latest`. The tag is recorded alongside
           # for human legibility only; the digest is what is deployed.
-          # tag: 676b642 (006-fleet-port-pullsecret merge, 2026-07-23) - the
-          # fleet placement enablers (spec 006 amendment): the deploy-chosen
-          # container port (persisted on fleet_app; its BIGINT ALTER was
-          # applied to the live database before this pin) and the code that
-          # reads the FLEET_IMAGE_PULL_SECRET env set below. The prior
-          # digest (aeefe203, built from dfe27c1) is the spec 012 operator
-          # dashboard adoption.
-          image: ghcr.io/statecrafting/statecraft@sha256:f9fa57c924d8f579c982bf792bc8e9d5575f74e6a351c7a9ffa4288a4cfdeb4f
+          # tag: 5cbbded (006-fleet-native-020 merge, 2026-07-23) - the
+          # @statecrafting/fleet-native 0.2.0 pin (spec 006 amendment): the
+          # per-app ingress-allow NetworkPolicy, ending the namespace-wide
+          # port pin the in-pod two-stage E2E surfaced. The prior digest
+          # (f9fa57c9, built from 676b642) is the fleet placement enablers.
+          image: ghcr.io/statecrafting/statecraft@sha256:43717a271e3936a051c8baccc4893e1f4dbd3319ef376332afcc9eb3960e03d2
           imagePullPolicy: IfNotPresent
           # Fail-loud (spec 009 section 4.2, built 2026-07-23). Encore's
           # $env-bound secrets resolve absent-as-empty and are read lazily, so
