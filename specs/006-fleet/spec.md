@@ -492,6 +492,18 @@ rejections, ahead of `gateOrDeny`, so no gate decision is spent on a
 request that cannot proceed, and its message does not disclose which
 tenant holds the name.
 
+What the conflict discloses, stated rather than left implicit: any
+authenticated tenant can learn whether a given name is currently placed,
+by attempting to deploy it. The holder is not named, but occupancy is
+fleet-wide information. That is accepted, because it is not information
+the check creates: `<name>.<FLEET_BASE_DOMAIN>` is public DNS with a
+public certificate, so occupancy is already observable by anyone, without
+authenticating at all. The alternative (answering a false success and
+failing later in the cluster) would trade a disclosure that DNS already
+makes for a silent failure, which is the wrong direction for this spec.
+Enumerating names cheaply is bounded by the tenant-write authorization
+the endpoint already requires and by the rate limiting in front of it.
+
 The check is application-level, not a constraint, so two simultaneous
 deploys of the same name can both pass it. That is accepted rather than
 overlooked: the correct constraint is a partial unique index

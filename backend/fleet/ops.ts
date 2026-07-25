@@ -51,8 +51,14 @@ export function isRemoved(status: FleetAppStatus): boolean {
  *
  * A name is only reserved by an app that still exists: `removed` is terminal
  * and its cluster resources are gone with it, so the name returns to the pool
- * while the row stays for the audit trail. There is at most one live holder,
- * because that is exactly what deploy checks before it places.
+ * while the row stays for the audit trail.
+ *
+ * Normally one row at most is live, because deploy checks this before it
+ * places. That is a property of the happy path, not an invariant this code or
+ * the schema enforces: the check and the insert are not atomic, so a race can
+ * leave two live rows (spec 006, amendment 2026-07-25). Returning the first is
+ * still correct for every caller, since all of them use the result as an
+ * occupancy gate rather than as an identity.
  */
 export function liveHolder<T extends { status: FleetAppStatus }>(
   rows: readonly T[],
