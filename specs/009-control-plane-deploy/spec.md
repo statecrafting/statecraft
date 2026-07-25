@@ -1017,6 +1017,16 @@ access beyond the posted text.
   restore it) is still owed once, after Flux reconciles the wrapper; until
   that run this item stays open by its own "verified once, deliberately"
   wording.
+  **Run 2026-07-25, and MET.** `GITHUB_WEBHOOK_SECRET` (the same key the
+  2026-07-21 run used, so the two are directly comparable) was removed from
+  the live pod Secret and the pod replaced. The container refused to start,
+  by name, and stayed refused: `[required-env] GITHUB_WEBHOOK_SECRET is
+  empty or unset` / `[required-env] refusing to start; missing:
+  GITHUB_WEBHOOK_SECRET`, exit code 1, `CrashLoopBackOff` within 33 seconds,
+  and the public edge served 503 rather than the silent `401` of 2026-07-21.
+  Restoring the key and replacing the pod returned the edge to 200. This
+  criterion is now satisfied; the amendment below records the run and the
+  two findings it produced.
 - `https://app.statecraft.ing` serves the governance UI over a real cert (not
   the ingress default certificate).
 - OIDC discovery at `https://app.statecraft.ing/auth/v1/.well-known/openid-configuration`
@@ -1295,3 +1305,95 @@ no new secret, and no env change rides this pin; the digest change rolls
 the pod by itself (Recreate). Post-roll the operator deletes the stale
 hand-patched `fleet-allow-ingress-nginx` from the test tenant namespace,
 per the spec 006 amendment's migration note.
+
+## Amendment (2026-07-25): the fail-loud test, run at last, and what it found
+
+Section 5's oldest open acceptance item is closed. The test it asks for
+("remove a required key, watch the crash loop, restore it") ran against
+the live control plane on 2026-07-25, deliberately, once.
+
+Method, recorded because the restore path is the part worth copying: the
+`secrets` Flux Kustomization was suspended first, so reconciliation could
+not race the test, and resumed afterwards, so the restore came from git
+rather than from anything typed by hand. `GITHUB_WEBHOOK_SECRET` was
+removed from the pod Secret with a JSON-patch `remove`, and the pod was
+replaced by deleting it (never `kubectl rollout restart` on a
+Flux-managed Deployment). The same key the failed 2026-07-21 run used, so
+the two results are directly comparable.
+
+Result, the exact inversion of 2026-07-21:
+
+```
+[required-env] GITHUB_WEBHOOK_SECRET is empty or unset
+[required-env] refusing to start; missing: GITHUB_WEBHOOK_SECRET
+```
+
+exit code 1, `CrashLoopBackOff` within 33 seconds of the replacement, and
+`https://app.statecraft.ing` serving 503. In 2026-07-21 the same removal
+produced a healthy pod and a silent `401`. The wrapper does what section
+4.2 built it to do: the failure is loud, immediate, names every missing
+variable at once, and fails closed at the edge. Restoring the Secret
+through Flux and replacing the pod returned the edge to 200; the restored
+value was byte-compared against the pre-test value before the local copy
+was destroyed. Total deliberate downtime, about three minutes.
+
+### Finding 1: rauthy is never asked to stop, and it costs restarts
+
+The recovery restart did not come up first try. It crash-looped three
+times before a boot got through, on a pod replacement with nothing else
+wrong with it, and the reason is a defect this test would never have been
+looking for:
+
+```
+thread 'tokio-rt-worker' panicked at hiqlite-wal-0.14.0/src/log_store.rs:47:21:
+LockFile /data/rauthy/db/logs is locked and in use by another process
+```
+
+`docker/entrypoint.sh` is PID 1, and it had no signal handler. The
+runtime signals PID 1 and nothing else, so on every container stop the
+shell died alone and rauthy was SIGKILLed at the end of the grace period,
+never releasing its hiqlite WAL and state-machine locks. Every boot after
+every restart therefore began unclean (three `LockFile ... exists
+already - this is not a clean start!` warnings, present on the successful
+boot too), and intermittently the stale lock was read as live and aborted
+rauthy outright, which die-together turns into a crash loop.
+
+This is the same failure shape as the seventeen-hour outage in section
+4.6 item 5, reached by a different route: anything that aborts rauthy
+becomes a container crash loop, and this one is reachable from an
+ordinary `kubectl delete pod`. Fixed in this repo's copy of the
+entrypoint (spec 002 owns `docker/`) and upstream in the enrahitu chassis
+(its spec 007); stamped apps each carry their own copy, so the handler
+does not arrive by a pin. **The fix is not yet in the deployed image**:
+the running digest predates it, so the residual is one image rebuild and
+digest re-pin, deliberately not improvised on the same night as the test.
+
+### Finding 2: the backup errors are replayed history, not failing backups
+
+The recurring `Error creating backup: ... output file already exists`
+noted after the 2026-07-24 E2E is diagnosed and is not what it looks
+like. Backups are healthy: rauthy's hiqlite writes one file per day at
+01:30 into `/data/rauthy/db/state_machine/backups`, and four consecutive
+daily files were present with no gaps.
+
+The errors are raft log replay. On boot hiqlite re-applies the `Backup`
+entries in its log, each with its **original** timestamp, and the
+timestamp is the backup filename, so `VACUUM main INTO` targets a file
+that already exists and fails. The count is exactly the number of
+retained backups: four errors, matching the four files, all emitted
+within 200ms of startup. Upstream knows: `writer.rs` carries the literal
+`TODO include a TS in the req to skip backups if they are replayed after
+a restart`.
+
+So the earlier "every few minutes" reading was wrong. It is once per
+boot, once per retained backup, and the E2E made it look periodic only
+because the pod was restarting repeatedly (Finding 1 explains why it was
+restarting more than expected). It is cosmetic: the replayed backup
+fails, the real daily backup succeeds, and the existing file is left
+intact. It is also **not ours to fix** and is recorded here rather than
+queued: rauthy pins `hiqlite` 0.14.0 from crates.io with the
+`[patch.crates-io]` block commented out, so the fork under `DevDep`
+is not in this image's dependency path at all. The one real cost is that
+it grows with `HQL_BACKUP_KEEP_DAYS` (30 here), so a month from now every
+boot will log thirty of these, and a genuine backup failure would be
+harder to see among them. Worth an upstream issue, not a local patch.

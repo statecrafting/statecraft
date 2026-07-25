@@ -368,3 +368,34 @@ spec's territory; spec 012 §5.1 records the design.
   follow the dist placeholder pattern; `spec-spine.toml` lists
   `frontend-admin` as a standalone npm package and hashes
   `app-manifest.json`.
+
+## Amendment (2026-07-25): the entrypoint's stop handler (a convergent hunk)
+
+`docker/entrypoint.sh` gains a SIGTERM/SIGINT handler that forwards the
+signal to rauthy and the app and waits for both before exiting 0. It is
+armed immediately after `RAUTHY_PID` is assigned, so a stop during the
+rauthy health wait is covered, and it tolerates an unset `APP_PID` in
+that window.
+
+Unlike the four hunks recorded above, this one is **not** a divergence.
+It lands identically in enrahitu's copy (its spec 007), and the reason it
+appears here at all is that the copies are maintained separately: a
+chassis fix to the entrypoint does not reach a stamped app through a
+version pin, only through the next sync. Recorded here so the next
+upstream sync sees a hunk it already has rather than one to reconcile.
+
+The motivation is a live defect, diagnosed in spec 009's amendment of the
+same date: without a handler the runtime's signal reached PID 1 alone,
+rauthy was SIGKILLed at the end of the grace period, and its embedded
+hiqlite never released its WAL and state-machine lock files. Every boot
+after every restart began unclean, and on 2026-07-25 that escalated to
+three crash-looped boots on a single routine pod replacement.
+
+`docker/entrypoint.test.ts` is the first test in this repo over `docker/`.
+It covers the shipped function rather than a copy: the `shutdown()` body
+is lifted out of `docker/entrypoint.sh` by text and run against stub
+children, so editing the real function breaks the test. Four cases: both
+traps installed, SIGTERM and SIGINT each reaching both children, and a
+signal that lands before the app has started. The negative was checked by
+hand: with the trap removed the harness exits 143 and neither child is
+signalled at all.
