@@ -80,6 +80,32 @@ for (const arm of arms) {
       expect(done?.image).toBe("ghcr.io/acme/app:v2");
     });
 
+    it("re-places a removed app's name (the name column is not database-unique)", async () => {
+      // The 2026-07-24 E2E defect: `name` was UNIQUE, rows outlive `remove`, so
+      // re-placing a removed name died on fleet_app_name_key as an untyped 500.
+      const repo = ledger.repo(FleetApp);
+      const name = `echo-${randomUUID().slice(0, 8)}`;
+      const place = (status: "running" | "removed") =>
+        Object.assign(new FleetApp(), {
+          tenantId: "t-acme",
+          name,
+          namespace: "t-acme",
+          image: "ealen/echo-server:latest",
+          port: 4000,
+          host: `${name}.deployd.xyz`,
+          status,
+        });
+
+      const first = await repo.insert(place("running"));
+      await repo.updateById(first.id, { status: "removed", updatedAt: new Date() });
+      const second = await repo.insert(place("running"));
+
+      const carrying = await repo.findWhere({ name });
+      expect(carrying.map((a) => a.id).sort()).toEqual([first.id, second.id].sort());
+      expect(carrying.filter((a) => a.status !== "removed")).toHaveLength(1);
+      expect(second.id).not.toBe(first.id);
+    });
+
     it("round-trips a FleetOp intent-journal row", async () => {
       const repo = ledger.repo(FleetOp);
       const op = Object.assign(new FleetOp(), {

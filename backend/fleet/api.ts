@@ -20,6 +20,7 @@ import * as native from "./native";
 import { FLEET_DEFAULT_PORT, isValidAppName, isValidPort } from "./ops";
 import {
   createApp,
+  findLiveAppByName,
   finishOp,
   getAccessibleFleetApp,
   getApp,
@@ -146,6 +147,17 @@ export const deploy = api(
       );
     }
     const pullSecret = fleetImagePullSecret();
+
+    // The name is a live cluster identity, so it has to be free across the whole
+    // fleet, not just this tenant. A removed app frees its name; only a live
+    // holder blocks. Answered as a typed conflict before the gate, alongside the
+    // other request-shape rejections, so no gate decision is spent on a request
+    // that cannot proceed. Which tenant holds it is not disclosed.
+    if (await findLiveAppByName(appName)) {
+      throw APIError.alreadyExists(
+        `app name "${appName}" is already placed; remove that app or choose another name`,
+      );
+    }
 
     const gated = await gateOrDeny("deploy", { tenantId: id, app: appName, image: img }, "soft");
     const app = await createApp({

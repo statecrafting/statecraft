@@ -23,8 +23,15 @@ export class FleetApp {
   @Column({ index: true }) tenantId = "";
   /** The stamp job that produced this app's image, when it came from the factory. */
   @Column({ nullable: true }) stampJobId: string | null = null;
-  /** DNS-1123 label: the resource name and the `<name>.<FLEET_BASE_DOMAIN>` host label. */
-  @Column({ index: true, unique: true }) name = "";
+  /**
+   * DNS-1123 label: the resource name and the `<name>.<FLEET_BASE_DOMAIN>` host
+   * label. Indexed, deliberately not database-unique: `removed` is terminal but
+   * the row stays for the audit trail, so a UNIQUE column would retire a name
+   * forever the first time an app was placed under it. Uniqueness is scoped to
+   * live apps and enforced in `store.ts` (`findLiveAppByName`), which lets
+   * deploy answer a typed conflict instead of a driver error.
+   */
+  @Column({ index: true }) name = "";
   /** The tenant namespace `t-<tenantId>` the app is placed in. */
   @Column() namespace = "";
   /** The exact registry ref currently placed (spec 006 §3 image source). */

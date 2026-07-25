@@ -8,6 +8,7 @@ import {
   type FleetOpStatus,
   isValidAppName,
   isValidPort,
+  liveHolder,
 } from "./ops";
 
 describe("fleet-op state machine", () => {
@@ -83,5 +84,27 @@ describe("container port validation", () => {
 
   it("treats float-typed integers as integers (JS number semantics)", () => {
     expect(isValidPort(8080.0)).toBe(true);
+  });
+});
+
+describe("app-name holder selection", () => {
+  const row = (id: string, status: FleetAppStatus) => ({ id, status });
+
+  it("frees the name once every row carrying it is removed", () => {
+    expect(liveHolder([])).toBeNull();
+    expect(liveHolder([row("a", "removed")])).toBeNull();
+    expect(liveHolder([row("a", "removed"), row("b", "removed")])).toBeNull();
+  });
+
+  it("reports the live holder in every non-terminal state", () => {
+    for (const status of ["placing", "running", "updating", "failed"] as const) {
+      expect(liveHolder([row("a", "removed"), row("b", status)])?.id).toBe("b");
+    }
+  });
+
+  it("counts a failed placement as holding the name", () => {
+    // A failed deploy can leave cluster objects behind, so its name is not free
+    // until it is removed through the governed verb.
+    expect(liveHolder([row("a", "failed")])?.id).toBe("a");
   });
 });
