@@ -464,3 +464,49 @@ live operational record:
   additive, so the ordering is safe in both directions.
 - `fleet-allow-egress` admits only DNS and outbound 443: a placed cell
   cannot reach SMTP, a residual for cells that send mail.
+
+## Amendment (2026-07-25): an app name is reserved by a live app, not by a row
+
+The 2026-07-24 re-run of the in-pod E2E surfaced a second defect. `name`
+carried a database `UNIQUE` constraint, but `removed` is terminal and the
+row stays for the audit trail, so the first placement under a name
+retired that name permanently: re-placing it died inside the driver on
+`fleet_app_name_key` and surfaced as an untyped 500. That is why the
+re-run had to place `echo2` and `cell2` rather than reuse `echo` and
+`cell`. Checked against the live database 2026-07-25, the whole name pool
+used to date was already burnt: five rows, every one of them `removed`.
+
+The law this settles: **a name is reserved by an app that still exists,
+not by a row that records one.** `removed` is terminal and its cluster
+resources are gone with it, so the name returns to the pool while the
+journal keeps the history. Uniqueness is fleet-wide rather than
+per-tenant, because `<name>.<FLEET_BASE_DOMAIN>` is a single global DNS
+namespace and two tenants cannot hold the same host.
+
+Implementation: the column keeps its index and drops `unique`
+(`backend/fleet/entities.ts`); `findLiveAppByName` in `store.ts` selects
+the non-removed holder of a name through the pure `liveHolder` selector
+in `ops.ts`; `deploy` answers `APIError.alreadyExists` (409) when a live
+app already holds the name. The check sits with the other request-shape
+rejections, ahead of `gateOrDeny`, so no gate decision is spent on a
+request that cannot proceed, and its message does not disclose which
+tenant holds the name.
+
+The check is application-level, not a constraint, so two simultaneous
+deploys of the same name can both pass it. That is accepted rather than
+overlooked: the correct constraint is a partial unique index
+(`WHERE status <> 'removed'`), which CoreLedger's schema layer does not
+express, and the cluster is the backstop either way, since the second
+`placeApp` meets the first app's resources and fails loud into a
+journaled failed op. The window is milliseconds on an operator-driven
+verb.
+
+CoreLedger schema init is CREATE-only and the spec 011 migration runner
+excludes destructive DDL by design ("write them by hand, review them"), so
+the live database needs a manual
+`ALTER TABLE "fleet_app" DROP CONSTRAINT IF EXISTS "fleet_app_name_key"`
+(precedent: the `port` ALTER above, 2026-07-23). Applied to the live
+database 2026-07-25 ahead of the merge, so no deploy-ordering window
+exists; the five existing rows were unaffected. The plain `name` index is
+self-healing: `ensureSchema` creates `idx_fleet_app_name` on the next
+boot, now that the column is no longer unique.

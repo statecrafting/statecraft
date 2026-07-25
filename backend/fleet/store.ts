@@ -20,6 +20,7 @@ import {
   type FleetOpStatus,
   InvalidAppTransitionError,
   InvalidOpTransitionError,
+  liveHolder,
 } from "./ops";
 
 export const dbReady: Promise<void> = ledger().init([FleetApp, FleetOp]);
@@ -66,6 +67,21 @@ export async function getAccessibleFleetApp(
   const tenant = await authorizeTenant(app.tenantId, principal, level);
   if (!tenant) return null;
   return app;
+}
+
+/**
+ * The live app holding `name`, or null if the name is free.
+ *
+ * The lookup is fleet-wide rather than per-tenant on purpose: an app name is a
+ * cluster identity (the per-app resource names and the `<name>.<domain>` host),
+ * so two tenants cannot hold it at once. Removed rows are skipped; they own
+ * nothing in the cluster any more. The name column is indexed and a name
+ * accumulates at most one row per placement generation, so filtering the few
+ * matches here beats reaching for the raw-SQL escape hatch.
+ */
+export async function findLiveAppByName(name: string): Promise<FleetApp | null> {
+  await dbReady;
+  return liveHolder(await apps().findWhere({ name }));
 }
 
 export interface CreateAppInput {

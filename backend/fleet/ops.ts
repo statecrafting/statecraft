@@ -46,6 +46,20 @@ export function isRemoved(status: FleetAppStatus): boolean {
   return status === "removed";
 }
 
+/**
+ * The row that still holds an app name, given every row carrying it.
+ *
+ * A name is only reserved by an app that still exists: `removed` is terminal
+ * and its cluster resources are gone with it, so the name returns to the pool
+ * while the row stays for the audit trail. There is at most one live holder,
+ * because that is exactly what deploy checks before it places.
+ */
+export function liveHolder<T extends { status: FleetAppStatus }>(
+  rows: readonly T[],
+): T | null {
+  return rows.find((row) => !isRemoved(row.status)) ?? null;
+}
+
 export class InvalidAppTransitionError extends Error {
   constructor(from: FleetAppStatus, to: FleetAppStatus) {
     super(`invalid fleet-app transition: ${from} -> ${to}`);
