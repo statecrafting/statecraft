@@ -520,5 +520,17 @@ the live database needs a manual
 (precedent: the `port` ALTER above, 2026-07-23). Applied to the live
 database 2026-07-25 ahead of the merge, so no deploy-ordering window
 exists; the five existing rows were unaffected. The plain `name` index is
-self-healing: `ensureSchema` creates `idx_fleet_app_name` on the next
-boot, now that the column is no longer unique.
+self-healing, but not immediately: `ensureSchema` emits the plain index
+only when the column is not unique, so `idx_fleet_app_name` appears on
+the first boot of an image built from this change, not on the next boot
+of the running pod. Verified 2026-07-25: the pod has booted twice since
+the ALTER and `fleet_app` carries no index on `name`. Harmless at five
+rows and unqueried by the deployed code, but recorded so its absence
+reads as pending rather than as a failed migration.
+
+One consequence worth stating, because it inverts the usual deploy
+order: the ALTER alone already fixes the production symptom. The
+deployed code has no name check at all, so with the constraint gone a
+re-placed name simply inserts and places. What the merged code adds on
+top is the typed 409 for a name that is genuinely still live, which is
+the part that waits on the image.
