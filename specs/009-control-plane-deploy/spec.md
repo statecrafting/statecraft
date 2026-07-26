@@ -1397,3 +1397,49 @@ is not in this image's dependency path at all. The one real cost is that
 it grows with `HQL_BACKUP_KEEP_DAYS` (30 here), so a month from now every
 boot will log thirty of these, and a genuine backup failure would be
 harder to see among them. Worth an upstream issue, not a local patch.
+
+## Amendment (2026-07-25, fifth pin): the stop handler reaches production
+
+The Deployment moves to digest `780eeefe` (tag `7ff1347`, the PR #72
+merge). This pin exists because the amendment above closed an acceptance
+item by finding a defect, and the fix it produced could not reach the
+cluster without a rebuild: the running image predated it. Two changes
+ride the pin, from two different specs' territory.
+
+The first is Finding 1's fix. `docker/entrypoint.sh` (spec 002's
+territory, mirrored upstream in the enrahitu chassis) installs `TERM` and
+`INT` traps that forward the stop to rauthy and the app and then wait for
+them, so rauthy releases its hiqlite WAL and state-machine locks on the
+way out. The trap is installed immediately after rauthy is backgrounded
+rather than after the app starts, so a stop arriving during the rauthy
+health wait is handled too. This ends the crash-loop-on-restart shape
+that made an ordinary `kubectl delete pod` a gamble.
+
+The second is spec 006's name-reuse fix: `fleet_app.name` keeps its index
+and loses `unique`, uniqueness is scoped to non-removed rows and enforced
+fleet-wide in `store.ts`, and deploy answers a typed 409 before the
+action gate. The deploy ordering here is inverted from the usual and
+worth stating, because it means this pin carries less risk than it looks
+like: the `DROP CONSTRAINT` was applied to the live database on
+2026-07-25 ahead of the merge (precedent: the `port` `BIGINT` ALTER,
+third pin), and since the deployed code has no name check at all, that
+ALTER alone already fixed the production symptom. What the image adds is
+the typed 409 for a name that is genuinely still live. One consequence
+does arrive with the image rather than before it: `ensureSchema` emits
+the plain `idx_fleet_app_name` only when the column is not unique, so the
+index appears on this image's **first boot**, not on the boot after the
+ALTER (verified absent across two boots, spec 006 amendment).
+
+No schema delta rides this pin (the ALTER preceded it), no secret delta,
+and no env change. The digest change rolls the pod by itself under
+`Recreate`; no pod delete is needed.
+
+Acceptance for this pin, three signals rather than the usual one:
+
+1. The rolled pod is `Ready` on `780eeefe` and the edge serves 200.
+2. A deliberate `kubectl delete pod` logs `[entrypoint] received SIGTERM;
+   stopping supervised processes`, and the replacement boots **without**
+   the `LockFile ... exists already - this is not a clean start!`
+   warnings that every boot has carried until now. That absence is the
+   whole point of the pin, and it is the first time it can be observed.
+3. `fleet_app` carries `idx_fleet_app_name`.
