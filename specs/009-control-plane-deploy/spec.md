@@ -1434,12 +1434,61 @@ No schema delta rides this pin (the ALTER preceded it), no secret delta,
 and no env change. The digest change rolls the pod by itself under
 `Recreate`; no pod delete is needed.
 
-Acceptance for this pin, three signals rather than the usual one:
+### Acceptance, verified live 2026-07-26
 
-1. The rolled pod is `Ready` on `780eeefe` and the edge serves 200.
-2. A deliberate `kubectl delete pod` logs `[entrypoint] received SIGTERM;
-   stopping supervised processes`, and the replacement boots **without**
-   the `LockFile ... exists already - this is not a clean start!`
-   warnings that every boot has carried until now. That absence is the
-   whole point of the pin, and it is the first time it can be observed.
-3. `fleet_app` carries `idx_fleet_app_name`.
+Three signals rather than the usual one. All three hold.
+
+1. **The roll.** Flux applied `main@5d29590`; the Deployment replaced
+   the pod under `Recreate` with no intervention, and the new pod came
+   up `Ready` on `780eeefe` with zero restarts. The edge served 200.
+2. **The clean stop, and the clean boot after it.** A deliberate
+   `kubectl delete pod` returned in **two seconds** rather than running
+   the grace period out, which is the first observable difference: the
+   stop is now handled rather than waited out and SIGKILLed. The
+   captured log carries `[entrypoint] received SIGTERM; stopping
+   supervised processes`, then the whole chain that SIGKILL used to cut
+   off: rauthy's `SIGTERM received; starting graceful shutdown`, the
+   app's `shutdown complete`, `RaftCore shutdown complete`, and twice
+   (logs and logs_cache) the line this pin exists for, `WAL writer
+   Shutdown complete`. The replacement pod then booted with **zero**
+   `LockFile ... exists already` warnings, zero lock panics, and zero
+   restarts. That is the first clean boot in this deploy's history.
+3. **The index.** `fleet_app` now carries `idx_fleet_app_name` (before
+   the roll: `fleet_app_pkey`, `idx_fleet_app_status`,
+   `idx_fleet_app_tenant_id` only). It appeared on this image's first
+   boot, exactly as the spec 006 amendment predicted.
+
+One intermediate state is worth recording so it is not misread next
+time: the **first** boot on `780eeefe` still carried the two unclean
+warnings. That is correct and expected, because the pod it replaced ran
+the handler-less image and was SIGKILLed on its way out. The new
+entrypoint can only make the boot *after* its own stop clean, so the
+roll itself cannot demonstrate the fix; only the delete in signal 2 can.
+
+### Correction to Finding 2: the backup noise was downstream of Finding 1
+
+Finding 2 above concluded that the `Error creating backup: ... output
+file already exists` lines are upstream's to fix, not ours, and
+projected that they would grow with `HQL_BACKUP_KEEP_DAYS` until every
+boot logged thirty of them. The diagnosis (raft log replay re-applying
+past `Backup` entries with their original timestamps) was right; the
+conclusion that we could only wait for upstream was wrong.
+
+The two boots above are a controlled comparison: same image, same data,
+same four retained backup files, consecutive.
+
+- Unclean boot (the roll, predecessor SIGKILLed): **four** errors,
+  matching the four retained files, all within 160ms of startup.
+- Clean boot (after the handled stop): **zero**.
+
+The replay only happens when there is a log to replay, and an unclean
+stop is what leaves one. Now that stops are handled, the state machine
+is persisted on the way out and the entries are not re-applied. So the
+noise was a second symptom of Finding 1 rather than an independent
+cosmetic defect, and the thirty-a-boot projection does not hold for
+normal operation. The upstream `TODO` is still real and still worth an
+issue, but its blast radius here is now confined to genuinely unclean
+stops (node loss, OOM kill, an external SIGKILL), where it is the least
+of the problems. A practical consequence: these errors are now a useful
+signal rather than background noise, because seeing them at all means
+the previous stop was not clean.
