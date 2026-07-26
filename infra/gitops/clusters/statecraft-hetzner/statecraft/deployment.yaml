@@ -53,12 +53,15 @@ spec:
         - name: statecraft
           # Pinned by digest, never `:latest`. The tag is recorded alongside
           # for human legibility only; the digest is what is deployed.
-          # tag: 5cbbded (006-fleet-native-020 merge, 2026-07-23) - the
-          # @statecrafting/fleet-native 0.2.0 pin (spec 006 amendment): the
-          # per-app ingress-allow NetworkPolicy, ending the namespace-wide
-          # port pin the in-pod two-stage E2E surfaced. The prior digest
-          # (f9fa57c9, built from 676b642) is the fleet placement enablers.
-          image: ghcr.io/statecrafting/statecraft@sha256:43717a271e3936a051c8baccc4893e1f4dbd3319ef376332afcc9eb3960e03d2
+          # tag: 7ff1347 (PR #72 merge, 2026-07-25) - the first image whose
+          # entrypoint forwards container stop to rauthy (spec 002; the
+          # 2026-07-25 fail-loud run found PID 1 had no signal handler, so
+          # rauthy was SIGKILLed and left stale hiqlite WAL locks that
+          # crash-loop the next boot), plus the fleet name-reuse typed 409
+          # (spec 006) and the plain idx_fleet_app_name this image's first
+          # boot emits. The prior digest (43717a27, built from 5cbbded) is
+          # the @statecrafting/fleet-native 0.2.0 pin.
+          image: ghcr.io/statecrafting/statecraft@sha256:780eeefeb3f28dedcb36e16fb11108002c00e7e0751efb883c6b9b4f6481ebee
           imagePullPolicy: IfNotPresent
           # Fail-loud (spec 009 section 4.2, built 2026-07-23). Encore's
           # $env-bound secrets resolve absent-as-empty and are read lazily, so
